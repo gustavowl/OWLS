@@ -3,4 +3,4 @@ import Program
 
 parseOWLS input = parse parseSubprogram "" input
 
-test = parseOWLS "main () {}"
+test = parseOWLS "main () {} oi"

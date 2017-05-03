@@ -1,11 +1,9 @@
 module Program where
 
-import System.IO
 import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
-import Text.ParserCombinators.Parsec.Language
-import Text.ParserCombinators.Parsec.Token
+import Lexer
 
 -- Program (subprograms, main)
 data Program = Program [Subprogram] Subprogram
@@ -13,9 +11,15 @@ data Program = Program [Subprogram] Subprogram
 -- Generalization
 -- Function (parameters, return type, body)
 -- Procedure (parameters, body)
-data Subprogram = Function [String] String [Statement] | Procedure [String] [Statement]
+data Subprogram = Function [Var] Type [Statement] | Procedure [Var] [Statement]
 
-data Statement = String -- TODO
+data Statement = Statement String -- TODO
+
+-- Var (name, type)
+data Var = Var String String -- TODO
+
+-- Type (name)
+data Type = Type String
 
 parseSubprograms :: Parser [Subprogram]
 parseSubprograms = many parseSubprogram
@@ -24,7 +28,7 @@ parseSubprogram :: Parser Subprogram
 parseSubprogram = parseFunction <|> parseProcedure
 
 parseFunction :: Parser Subprogram
-parseFunction = do
+parseFunction =  do
 	reserved "func"
 	params <- parseParameters
 	ret <- parseReturnType
@@ -33,20 +37,30 @@ parseFunction = do
 
 parseProcedure :: Parser Subprogram
 parseProcedure = do
-	symbol "proc"
+	reserved "proc"
 	params <- parseParameters
 	body <- parseBlock
 	return $ Procedure params body 
 
-parseParameters :: Parser [String]
-parseParameters = sepBy parens comma
+parseParameters :: Parser [Var]
+parseParameters = parens (sepBy parseParameter comma)
 
-parseReturnType :: Parser String
-parseReturnType = do
+parseParameter :: Parser Var
+parseParameter = do
+	name <- identifier
 	colon
-	return identifier
+	t <- identifier
+	return $ Var name t
+
+parseReturnType :: Parser Type
+parseReturnType = do
+	t <- identifier
+	return $ Type t
 
 parseBlock :: Parser [Statement]
-parseBlock = do 
-	return sepBy braces semi
+parseBlock = braces (sepBy parseStatement semi)
 
+parseStatement :: Parser Statement
+parseStatement = do
+	bla <- identifier -- TODO
+	return $ Statement bla
