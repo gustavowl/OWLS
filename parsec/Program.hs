@@ -4,6 +4,7 @@ import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Lexer
+import Expr
 
 -- Program (subprograms, main)
 data Program = Program [Subprogram] Subprogram
@@ -11,15 +12,25 @@ data Program = Program [Subprogram] Subprogram
 -- Generalization
 -- Function (parameters, return type, body)
 -- Procedure (parameters, body)
-data Subprogram = Function [Var] Type [Statement] | Procedure [Var] [Statement]
-
-data Statement = Statement String -- TODO
+data Subprogram = Function [Var] Type [Statement] 
+				| Procedure [Var] [Statement]
 
 -- Var (name, type)
 data Var = Var String String -- TODO
 
 -- Type (name)
 data Type = Type String
+
+data Statement =  If BoolExpr [Statement]
+				| While BoolExpr [Statement]
+				| For BoolExpr [Statement]
+				| Attribuition Var Expr
+				| Comp_Attribuition
+
+Statement String -- TODO
+
+parseProgram :: Parser Program
+parseProgram = par
 
 parseSubprograms :: Parser [Subprogram]
 parseSubprograms = many parseSubprogram
