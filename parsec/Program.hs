@@ -5,7 +5,7 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.Show.Functions
 import Lexer
---import Expr
+import Expr
 
 ---------------------------------------------------------------------------------------------------
 -- Program (subprograms, main)
@@ -53,9 +53,9 @@ instance Show Type where
 -- Statement (genelarization)
 data Statement =  
 	-- If (expression, block) 
-	If String [Statement]
+	If Expr [Statement]
 	-- Attribuition (id, expression)
-	| Attr String String
+	| Attr String Expr
 --	  If BoolExpr [Statement]
 --	| While BoolExpr [Statement]
 --	| For BoolExpr [Statement]
@@ -123,19 +123,23 @@ parseReturnType = do
 parseBlock :: Parser [Statement]
 parseBlock = braces (endBy parseStatement semi)
 
+---------------------------------------------------------------------------------------------------
+-- Statements
+---------------------------------------------------------------------------------------------------
+
 parseStatement :: Parser Statement
-parseStatement = parseIf <|> parseAttr
+parseStatement = parseIf <|> parseAttr -- TODO
 
 parseIf :: Parser Statement
 parseIf = do
 	reserved "if"
-	exp <- parens (many digit)
+	exp <- parseExpr
 	block <- parseBlock
 	return $ If exp block
 
 parseAttr :: Parser Statement
 parseAttr = do
 	id <- identifier
-	symbol "=" 
-	exp <- many digit
+	reservedOp "=" 
+	exp <- parseExpr
 	return $ Attr id exp

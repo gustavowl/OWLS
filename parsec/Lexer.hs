@@ -3,6 +3,7 @@ module Lexer where
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Char
 import Text.ParserCombinators.Parsec.Language
+import Text.ParserCombinators.Parsec.Expr
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 language = emptyDef {
@@ -41,7 +42,9 @@ reserved 		= Token.reserved   		lexer
 reservedOp 		= Token.reservedOp 		lexer
 parens 			= Token.parens     		lexer
 braces 			= Token.braces			lexer
+natural 		= Token.natural    		lexer
 integer 		= Token.integer    		lexer
+float	 		= Token.float    		lexer
 semi 			= Token.semi       		lexer
 whiteSpace 		= Token.whiteSpace 		lexer
 symbol 			= Token.symbol			lexer
