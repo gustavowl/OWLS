@@ -1,0 +1,7 @@
+x : int;
+byuibhj
+
+main() {
+	x = 10;
+	return "";
+}

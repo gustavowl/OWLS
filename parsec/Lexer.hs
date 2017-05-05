@@ -36,14 +36,15 @@ language = emptyDef {
 
 lexer = Token.makeTokenParser language
 
-identifier 	= Token.identifier 	lexer
-reserved   	= Token.reserved   	lexer
-reservedOp 	= Token.reservedOp 	lexer
-parens     	= Token.parens     	lexer
-braces		= Token.braces		lexer
-integer    	= Token.integer    	lexer
-semi       	= Token.semi       	lexer
-whiteSpace 	= Token.whiteSpace 	lexer
-symbol		= Token.symbol		lexer
-comma 		= Token.comma 		lexer
-colon		= Token.colon		lexer
+identifier		= Token.identifier 		lexer
+reserved 		= Token.reserved   		lexer
+reservedOp 		= Token.reservedOp 		lexer
+parens 			= Token.parens     		lexer
+braces 			= Token.braces			lexer
+integer 		= Token.integer    		lexer
+semi 			= Token.semi       		lexer
+whiteSpace 		= Token.whiteSpace 		lexer
+symbol 			= Token.symbol			lexer
+comma 			= Token.comma 			lexer
+colon 			= Token.colon			lexer
+stringLiteral 	= Token.stringLiteral	lexer

@@ -5,14 +5,13 @@ import Text.ParserCombinators.Parsec
 data Expr = BoolExpr
 		| NumExpr
 
-data NumExpr = bla
+data NumExpr = NumTerm | Add AddOp NumExpr  
 data NumTerm = bla
 data NumLeaf
 
 data BoolExpr = bla
 data BoolTerm = bla
 data BoolLeaf
-
 
 parseExpr :: Parser Expr
 parseExpr = parseNumExpr <|> parseBoolExpr
@@ -40,5 +39,3 @@ mul_op = do { symbol "*"; return (*) }
 	<|> do { symbol "/"; return (div) }
 
 neg_op = do { symbol "-"; return (-) }
-
-num = Double <|> Integer
