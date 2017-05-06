@@ -32,7 +32,7 @@ instance Show UnOp where
 ---------------------------------------------------------------------------------------------------
 -- Binary Operators
 ---------------------------------------------------------------------------------------------------
-data BinOp = Add | Sub | Mul | Div | And | Or
+data BinOp = Add | Sub | Mul | Div | And | Or | Equals | Differs | Lt | Gt | Lte | Gte
 instance Show BinOp where
 	show (Add) = "+"
 	show (Sub) = "-"
@@ -40,13 +40,19 @@ instance Show BinOp where
 	show (Div) = "/"
 	show (And) = "and"
 	show (Or) = "or"
+	show (Equals) = "=="
+	show (Differs) = "!="
+	show (Lt) = "<"
+	show (Gt) = ">"
+	show (Lte) = "<="
+	show (Gte) = ">="
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: Parser Expr
-parseExpr = parseBinaryChain
+parseExpr = parseOrChain
 
 parseExprLeaf :: Parser Expr
 parseExprLeaf = (try parseUnary)
@@ -145,17 +151,105 @@ parseNotOp = do
 	return $ Not
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Binary Operators
+-- Gramar - Logic Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseBinaryChain :: Parser Expr
-parseBinaryChain = (try parseBinaryChainTail) <|> (try parseBinaryChain')
+parseOrChain :: Parser Expr
+parseOrChain = (try parseOrChainTail) <|> (try parseAndChain)
 
-parseBinaryChainTail :: Parser Expr
-parseBinaryChainTail = do
-	e1 <- parseBinaryChain'
-	op <- parseAddOp <|> parseSubOp <|> parseOrOp
-	e2 <- parseBinaryChain
+parseOrChainTail :: Parser Expr
+parseOrChainTail = do
+	e1 <- parseAndChain
+	op <- parseOrOp
+	e2 <- parseOrChain
+	return $ ExprBinOp op e1 e2
+
+parseOrOp :: Parser BinOp
+parseOrOp = do
+	reserved "or"
+	return $ Or
+
+parseAndChain :: Parser Expr
+parseAndChain = (try parseAndChainTail) <|> (try parseEqChain)
+
+parseAndChainTail :: Parser Expr
+parseAndChainTail = do
+	e1 <- parseEqChain
+	op <- parseAndOp
+	e2 <- parseAndChain
+	return $ ExprBinOp op e1 e2
+
+parseAndOp :: Parser BinOp
+parseAndOp = do
+	reserved "and"
+	return $ And
+
+---------------------------------------------------------------------------------------------------
+-- Gramar - Relational Binary Operators
+---------------------------------------------------------------------------------------------------
+
+parseEqChain :: Parser Expr
+parseEqChain = (try parseEqChainTail) <|> (try parseRelational)
+
+parseEqChainTail :: Parser Expr
+parseEqChainTail = do
+	e1 <- parseRelational
+	op <- parseEqualsOp <|> parseDiffersOp
+	e2 <- parseEqChain
+	return $ ExprBinOp op e1 e2
+
+parseEqualsOp :: Parser BinOp
+parseEqualsOp = do
+	reservedOp "=="
+	return $ Equals
+
+parseDiffersOp :: Parser BinOp
+parseDiffersOp = do
+	reservedOp "!="
+	return $ Differs
+
+parseRelational :: Parser Expr
+parseRelational = (try parseRelationalTail) <|> (try parseAddChain)
+
+parseRelationalTail :: Parser Expr
+parseRelationalTail = do
+	e1 <- parseAddChain
+	op <- parseLtOp <|> parseGtOp <|> parseLteOp <|> parseGteOp
+	e2 <- parseAddChain
+	return $ ExprBinOp op e1 e2
+
+parseLtOp :: Parser BinOp
+parseLtOp = do
+	reservedOp "<"
+	return $ Lt
+
+parseGtOp :: Parser BinOp
+parseGtOp = do
+	reservedOp ">"
+	return $ Gt
+
+parseLteOp :: Parser BinOp
+parseLteOp = do
+	reservedOp "<="
+	return $ Lte
+
+parseGteOp :: Parser BinOp
+parseGteOp = do
+	reservedOp ">="
+	return $ Gte
+
+---------------------------------------------------------------------------------------------------
+-- Gramar - Numeric Binary Operators
+---------------------------------------------------------------------------------------------------
+
+parseAddChain :: Parser Expr
+parseAddChain = (try parseAddChainTail) <|> (try parseMulChain)
+
+parseAddChainTail :: Parser Expr
+parseAddChainTail = do
+	e1 <- parseMulChain
+	op <- parseAddOp <|> parseSubOp
+	e2 <- parseAddChain
 	return $ ExprBinOp op e1 e2
 
 parseAddOp :: Parser BinOp
@@ -168,19 +262,14 @@ parseSubOp = do
 	reservedOp "-"
 	return $ Sub
 
-parseOrOp :: Parser BinOp
-parseOrOp = do
-	reserved "or"
-	return $ Or
+parseMulChain :: Parser Expr
+parseMulChain = (try parseMulChainTail) <|> (try parseExprLeaf)
 
-parseBinaryChain' :: Parser Expr
-parseBinaryChain' = (try parseBinaryChainTail') <|> (try parseExprLeaf)
-
-parseBinaryChainTail' :: Parser Expr
-parseBinaryChainTail' = do
+parseMulChainTail :: Parser Expr
+parseMulChainTail = do
 	e1 <- parseExprLeaf
-	op <- (try parseMulOp) <|> parseDivOp <|> parseAndOp
-	e2 <- parseBinaryChain'
+	op <- parseMulOp <|> parseDivOp
+	e2 <- parseMulChain
 	return $ ExprBinOp op e1 e2
 
 parseMulOp :: Parser BinOp
@@ -193,7 +282,3 @@ parseDivOp = do
 	reservedOp "/"
 	return $ Div
 
-parseAndOp :: Parser BinOp
-parseAndOp = do
-	reserved "and"
-	return $ And

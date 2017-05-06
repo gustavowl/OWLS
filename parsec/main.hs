@@ -15,7 +15,7 @@ e = "x : int; \n" ++
 	"\t n = x * 10 + y - z * -w; \n" ++ 
 	"\t p = true; \n" ++
 	"\t q = p or false; \n" ++
-	--"\t bla = true or 10;" ++
+	"\t bla = y < x and p or y * z == n + 2; \n" ++
 --	"\t return \"\";\n" ++
 	"}"
 
