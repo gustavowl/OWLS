@@ -23,7 +23,7 @@ instance Show Term where
 	show (TermNat n) = show n
 	show (TermInt n) = show n
 	show (TermReal n) = show n
-	show (TermID s) = s
+	show (TermID s) = show s
 	show (TermFunc s e) = show s ++ show e
 
 ---------------------------------------------------------------------------------------------------
@@ -51,19 +51,22 @@ instance Show BinOp where
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: Parser Expr
-parseExpr = parseExprLeaf <|> (parens parseExpr)-- <|> parseExprUnOp <|> parseExprBinOp
+parseExpr = (try parseAddChain) -- <|> parseOrChain
 
 parseExprLeaf :: Parser Expr
-parseExprLeaf = do
+parseExprLeaf = (try parseUnary) <|> (try (parens parseExpr)) <|> parseExprTerm
+
+parseExprTerm :: Parser Expr
+parseExprTerm = do
 	t <- parseTerm
 	return $ ExprLeaf t
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - End Terms
+-- Grammar - Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
 parseTerm :: Parser Term
-parseTerm = try parseNumber <|> try parseFuncCall <|> parseID
+parseTerm = (try parseNumber) <|> (try parseFuncCall) <|> parseID
 
 parseID :: Parser Term
 parseID = do
@@ -97,28 +100,65 @@ parseRealTerm = do
 	n <- float
 	return $ TermReal n
 
-{-
-parseNumExpr :: Parser Expr
-parseNumExpr = do
-	
-	return $ Expr terms
+---------------------------------------------------------------------------------------------------
+-- Gramar - Binary Operators
+---------------------------------------------------------------------------------------------------
 
-parseNumTerm :: Parser NumTerm
-parseNumTerm = do
-	endTerms <- chainl1 parseNumLeaf mul_op
-	return $ NumTerm endTerms
+parseUnary :: Parser Expr
+parseUnary = do
+	op <- parseMinusOp
+	e <- parseExprLeaf
+	return $ ExprUnOp op e
 
-parseNumLeaf :: Parser NumEndTerm
-parseNumLeaf = parens parseExpr
-	<|> integer
-	<|> identifier
-	<|> parseFuncCall
+parseMinusOp :: Parser UnOp
+parseMinusOp = do
+	reservedOp "-"
+	return Minus
 
-add_op = do { symbol "+"; return (+) }
-	<|> do { symbol "-"; return (-) }
+---------------------------------------------------------------------------------------------------
+-- Gramar - Numeric Binary Operators
+---------------------------------------------------------------------------------------------------
 
-mul_op = do { symbol "*"; return (*) }
-	<|> do { symbol "/"; return (div) }
+parseAddChain :: Parser Expr
+parseAddChain = do
+	e <- try parseAddChainTail <|> parseMulChain
+	return e
 
-neg_op = do { symbol "-"; return (-) }
--}
+parseAddChainTail :: Parser Expr
+parseAddChainTail = do
+	e1 <- parseMulChain
+	op <- parseAddOp <|> parseSubOp
+	e2 <- parseAddChain
+	return $ ExprBinOp op e1 e2
+
+parseAddOp :: Parser BinOp
+parseAddOp = do
+	reservedOp "+"
+	return $ Add
+
+parseSubOp :: Parser BinOp
+parseSubOp = do
+	reservedOp "-"
+	return $ Sub
+
+parseMulChain :: Parser Expr
+parseMulChain = do
+	e <- try parseMulChainTail <|> parseExprLeaf
+	return e
+
+parseMulChainTail :: Parser Expr
+parseMulChainTail = do
+	e1 <- parseExprLeaf
+	op <- parseMulOp <|> parseDivOp
+	e2 <- parseMulChain
+	return $ ExprBinOp op e1 e2
+
+parseMulOp :: Parser BinOp
+parseMulOp = do
+	reservedOp "*"
+	return $ Mul
+
+parseDivOp :: Parser BinOp
+parseDivOp = do
+	reservedOp "/"
+	return $ Div
