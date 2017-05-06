@@ -7,24 +7,19 @@ import Lexer
 ---------------------------------------------------------------------------------------------------
 -- Generic Expression
 ---------------------------------------------------------------------------------------------------
-data Expr = ExprLeaf Term | ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
+data Expr = ExprNat Integer | ExprInt Integer | ExprReal Double | ExprBool Bool |
+			ExprID String | ExprFunc String [Expr] |
+			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
+
 instance Show Expr where
-	show (ExprLeaf s) = show s
+	show (ExprNat n) = show n
+	show (ExprInt n) = show n
+	show (ExprReal n) = show n
+	show (ExprBool n) = show n
+	show (ExprID s) = show s
+	show (ExprFunc s e) = show s ++ show e
 	show (ExprUnOp op e) = "(" ++ show op ++ show e ++ ")"
 	show (ExprBinOp op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
-
----------------------------------------------------------------------------------------------------
--- Leaf Terms
----------------------------------------------------------------------------------------------------
--- Number, ID or Function call with expressions as arguments
-data Term = TermNat Integer | TermInt Integer | TermReal Double 
-			| TermID String | TermFunc String [Expr]
-instance Show Term where
-	show (TermNat n) = show n
-	show (TermInt n) = show n
-	show (TermReal n) = show n
-	show (TermID s) = show s
-	show (TermFunc s e) = show s ++ show e
 
 ---------------------------------------------------------------------------------------------------
 -- Unary Operators
@@ -51,84 +46,116 @@ instance Show BinOp where
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: Parser Expr
-parseExpr = (try parseAddChain) -- <|> parseOrChain
+parseExpr = parseBinaryChain
 
 parseExprLeaf :: Parser Expr
-parseExprLeaf = (try parseUnary) <|> (try (parens parseExpr)) <|> parseExprTerm
-
-parseExprTerm :: Parser Expr
-parseExprTerm = do
-	t <- parseTerm
-	return $ ExprLeaf t
+parseExprLeaf = (try parseUnary)
+	<|> (try parseLiteral)
+	<|> (try parseFuncCall)
+	<|> (try parseID)
+	<|> (try (parens parseExpr))
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseTerm :: Parser Term
-parseTerm = (try parseNumber) <|> (try parseFuncCall) <|> parseID
-
-parseID :: Parser Term
+parseID :: Parser Expr
 parseID = do
 	id <- identifier
-	return $ TermID id
+	return $ ExprID id
 
-parseFuncCall :: Parser Term
+parseFuncCall :: Parser Expr
 parseFuncCall = do
 	id <- identifier
 	args <- parseArguments
-	return $ TermFunc id args
+	return $ ExprFunc id args
 
 parseArguments :: Parser [Expr]
 parseArguments = parens (sepBy parseExpr comma)
 
-parseNumber :: Parser Term
-parseNumber = parseNaturalTerm <|> parseIntegerTerm <|> parseRealTerm
-
-parseNaturalTerm :: Parser Term
-parseNaturalTerm = do
-	n <- natural
-	return $ TermInt n
-
-parseIntegerTerm :: Parser Term
-parseIntegerTerm = do
-	n <- integer
-	return $ TermNat n
-
-parseRealTerm :: Parser Term
-parseRealTerm = do
-	n <- float
-	return $ TermReal n
+parseLiteral :: Parser Expr
+parseLiteral = parseNumber <|> parseBool
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Binary Operators
+-- Grammar - Numeric Leaf Terms
+---------------------------------------------------------------------------------------------------
+
+parseNumber :: Parser Expr
+parseNumber = parseNatural <|> parseInteger <|> parseReal
+
+parseNatural :: Parser Expr
+parseNatural = do
+	n <- natural
+	return $ ExprInt n
+
+parseInteger :: Parser Expr
+parseInteger = do
+	n <- integer
+	return $ ExprNat n
+
+parseReal :: Parser Expr
+parseReal = do
+	n <- float
+	return $ ExprReal n
+
+---------------------------------------------------------------------------------------------------
+-- Grammar - Boolean Leaf Terms
+---------------------------------------------------------------------------------------------------
+
+parseBool :: Parser Expr
+parseBool = parseTrue <|> parseFalse
+
+parseTrue :: Parser Expr
+parseTrue = do
+	reserved "true"
+	return $ ExprBool True
+
+parseFalse:: Parser Expr
+parseFalse = do
+	reserved "false"
+	return $ ExprBool False
+
+---------------------------------------------------------------------------------------------------
+-- Gramar - Unary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseUnary :: Parser Expr
-parseUnary = do
-	op <- parseMinusOp
-	e <- parseExprLeaf
+parseUnary = parseMinus <|> parseNot
+
+parseMinus :: Parser Expr
+parseMinus = do
+	op <- try parseMinusOp
+	e <- try parseExprLeaf
 	return $ ExprUnOp op e
 
 parseMinusOp :: Parser UnOp
 parseMinusOp = do
 	reservedOp "-"
-	return Minus
+	return $ Minus
+
+parseNot :: Parser Expr
+parseNot = do
+	op <- try parseNotOp
+	e <- try parseExprLeaf
+	return $ ExprUnOp op e
+
+parseNotOp :: Parser UnOp
+parseNotOp = do
+	reserved "not"
+	return $ Not
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Numeric Binary Operators
+-- Gramar - Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseAddChain :: Parser Expr
-parseAddChain = do
-	e <- try parseAddChainTail <|> parseMulChain
-	return e
+parseBinaryChain :: Parser Expr
+parseBinaryChain = (try parseBinaryChainTail) <|> (try parseBinaryChain')
 
-parseAddChainTail :: Parser Expr
-parseAddChainTail = do
-	e1 <- parseMulChain
-	op <- parseAddOp <|> parseSubOp
-	e2 <- parseAddChain
+parseBinaryChainTail :: Parser Expr
+parseBinaryChainTail = do
+	e1 <- parseBinaryChain'
+	op <- parseAddOp <|> parseSubOp <|> parseOrOp
+	e2 <- parseBinaryChain
 	return $ ExprBinOp op e1 e2
 
 parseAddOp :: Parser BinOp
@@ -141,16 +168,19 @@ parseSubOp = do
 	reservedOp "-"
 	return $ Sub
 
-parseMulChain :: Parser Expr
-parseMulChain = do
-	e <- try parseMulChainTail <|> parseExprLeaf
-	return e
+parseOrOp :: Parser BinOp
+parseOrOp = do
+	reserved "or"
+	return $ Or
 
-parseMulChainTail :: Parser Expr
-parseMulChainTail = do
+parseBinaryChain' :: Parser Expr
+parseBinaryChain' = (try parseBinaryChainTail') <|> (try parseExprLeaf)
+
+parseBinaryChainTail' :: Parser Expr
+parseBinaryChainTail' = do
 	e1 <- parseExprLeaf
-	op <- parseMulOp <|> parseDivOp
-	e2 <- parseMulChain
+	op <- (try parseMulOp) <|> parseDivOp <|> parseAndOp
+	e2 <- parseBinaryChain'
 	return $ ExprBinOp op e1 e2
 
 parseMulOp :: Parser BinOp
@@ -162,3 +192,8 @@ parseDivOp :: Parser BinOp
 parseDivOp = do
 	reservedOp "/"
 	return $ Div
+
+parseAndOp :: Parser BinOp
+parseAndOp = do
+	reserved "and"
+	return $ And

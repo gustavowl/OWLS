@@ -128,7 +128,7 @@ parseBlock = braces (endBy parseStatement semi)
 ---------------------------------------------------------------------------------------------------
 
 parseStatement :: Parser Statement
-parseStatement = parseIf <|> parseAttr -- TODO
+parseStatement = (try parseAttr) <|> (try parseIf) -- TODO: other statement types
 
 parseIf :: Parser Statement
 parseIf = do

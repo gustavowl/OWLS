@@ -12,7 +12,10 @@ e = "x : int; \n" ++
 	"\t y = bla(10); \n" ++
 	"\t z = y; \n" ++
 	"\t w = bla(10, 5); \n" ++
-	"\t a = x * x + y - z * -w;" ++ 
+	"\t n = x * 10 + y - z * -w; \n" ++ 
+	"\t p = true; \n" ++
+	"\t q = p or false; \n" ++
+	--"\t bla = true or 10;" ++
 --	"\t return \"\";\n" ++
 	"}"
 
