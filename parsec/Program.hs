@@ -4,8 +4,11 @@ import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.Show.Functions
-import Lexer
+import Lexer -- Here is defined Token 
 import Expr
+
+data OWLParser = Parsec [Token] () Program
+data Token = String
 
 ---------------------------------------------------------------------------------------------------
 -- Program (subprograms, main)
@@ -48,21 +51,20 @@ instance Show Type where
 	show(Type n) = show n
 
 ---------------------------------------------------------------------------------------------------
--- Statements - If / While / For / Attribuition / Comp_Attribuition
+-- Statements - Condition / While / For / Attribuition / Comp_Attribuition
 ---------------------------------------------------------------------------------------------------
 -- Statement (genelarization)
 data Statement =  
-	-- If (expression, block) 
-	If Expr [Statement]
+	-- Condition (expression, block) 
+	Condition Expr [Statement]
 	-- Attribuition (id, expression)
 	| Attr String Expr
---	  If BoolExpr [Statement]
 --	| While BoolExpr [Statement]
 --	| For BoolExpr [Statement]
 --	| Attribuition Var Expr
 --	| CAttr
 instance Show Statement where
-	show (If a b) = "If{" ++ show a ++ "," ++ "}"
+	show (Condition a b) = "If{" ++ show a ++ "," ++ "}"
 	show (Attr a b) = "Attr{" ++ show a ++ "," ++ show b ++ "}" 
 
 ---------------------------------------------------------------------------------------------------
@@ -128,14 +130,14 @@ parseBlock = braces (endBy parseStatement semi)
 ---------------------------------------------------------------------------------------------------
 
 parseStatement :: Parser Statement
-parseStatement = (try parseAttr) <|> (try parseIf) -- TODO: other statement types
+parseStatement = (try parseAttr) <|> (try parseCondition) -- TODO: other statement types
 
-parseIf :: Parser Statement
-parseIf = do
-	reserved "if"
+parseCondition :: Parser Statement
+parseCondition = do
+	-- read Token
 	exp <- parseExpr
 	block <- parseBlock
-	return $ If exp block
+	return $ Condition exp block
 
 parseAttr :: Parser Statement
 parseAttr = do

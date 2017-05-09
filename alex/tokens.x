@@ -10,21 +10,48 @@ $alpha = [a-zA-Z]   -- alphabetic characters
 tokens :-
 
   $white+                              ;
-  "--".*                               ;
-  program                              { \s -> Program }
-  var                                  { \s -> Var }
-  begin                                { \s -> Begin}
-  end                                  { \s -> End}
-  :                                    { \s -> Colon}
-  ";"                                  { \s -> SemiColon}
-  int                                  { \s -> Type s}
-  :=                                   { \s -> Assign}
-  if                                   { \s -> If}
-  then                                 { \s -> Then}
-  write                                { \s -> Write}
-  >                                    { \s -> Greater}
-  $digit+                              { \s -> Int (read s) }
-  $alpha [$alpha $digit \_ \']*        { \s -> Id s }
+  "#".*                                ;
+  \{                                   {\s -> LBrace}
+  \}                                   {\s -> RBrace}
+  \(                                   {\s -> LParen}
+  \)                                   {\s -> RParen}
+  :                                    {\s -> Colon}
+  ";"                                  {\s -> SemiColon}
+  ","                                  {\s -> Comma}
+  .                                    {\s -> Dot}
+  main                                 {\s -> Main}
+  "="                                  {\s -> Assign}
+  func                                 {\s -> Func}
+  proc                                 {\s -> Proc}
+  if                                   {\s -> If}
+  else                                 {\s -> Else}
+  then                                 {\s -> Then}
+  while                                {\s -> While}
+  for                                  {\s -> For}
+  switch                               {\s -> Switch}
+  case                                 {\s -> Case}
+  "<="                                 {\s -> LessEq}
+  "<"                                  {\s -> Less}
+  ">="                                 {\s -> GreaterEq}
+  >                                    {\s -> Greater}
+  ==                                   {\s -> Equals}
+  "+"                                  {\s -> AddOp}
+  "-"                                  {\s -> SubOp}
+  "*"                                  {\s -> MultOp}
+  "/"                                  {\s -> DivOp}
+  "%"                                  {\s -> ModOp}
+  "&&"                                 {\s -> AndOp}
+  "||"                                 {\s -> OrOp}
+  "&"                                  {\s -> AndOpSC}
+  "|"                                  {\s -> OrOpSC}
+  "!="                                 {\s -> Differs}
+  nat                                  {\s -> Type s}
+  int                                  {\s -> Type s}
+  real                                 {\s -> Type s}
+  \-? $digit+ \. $digit*               {\s -> Real (read s)}
+  $digit+                              {\s -> Nat (read s)}
+  \-? $digit+                          {\s -> Integer (read s)}
+  $alpha [$alpha $digit \_ \']*        {\s -> Id s }
   \" $alpha [$alpha $digit ! \_ \']* \"  { \s -> String s}
 
 {
@@ -32,22 +59,45 @@ tokens :-
 
 -- The token type:
 data Token =
-  Program |
-  Var     |
-  Begin   |
-  End     |
-  Colon   |
-  SemiColon |
-  Assign    | 
-  If  |
-  Then |
-  Write |
-  Greater |
-  Type String |
-  Id String |
-  Int Int |
-  String String
-  deriving (Eq,Show)
+  LBrace         |
+  RBrace         |
+  LParen         |
+  RParen         | 
+  Colon          |
+  SemiColon      |
+  Comma          |
+  Dot            |
+  Main           | 
+  Func           |
+  Proc           |
+  If             |
+  Else           |
+  Assign         |
+  Then           |
+  Write          |
+  For            |
+  Switch         |
+  Case           |
+  LessEq         |
+  Less           |
+  GreaterEq      |
+  Greater        |
+  Equals         |
+  Differs        |
+  AddOp          |
+  SubOp          |
+  AndOp          |
+  MultOp         |
+  DivOp          |
+  ModOp          |
+  OrOp           |
+  AndOpSC        |
+  OrOpSC         |
+  Type String    |
+  Id String      |
+  Int Int        |
+  String String  |
+  deriving (Eq, Show)
 
 main = do
   s <- getContents
