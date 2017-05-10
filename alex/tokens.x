@@ -48,11 +48,9 @@ tokens :-
   nat                                  {\s -> Type s}
   int                                  {\s -> Type s}
   real                                 {\s -> Type s}
-  \-? $digit+ \. $digit*               {\s -> Real (read s)}
-  $digit+                              {\s -> Nat (read s)}
-  \-? $digit+                          {\s -> Integer (read s)}
+  \-? $digit+                          {\s -> Int (read s)}
   $alpha [$alpha $digit \_ \']*        {\s -> Id s }
-  \" $alpha [$alpha $digit ! \_ \']* \"  { \s -> String s}
+  \" $alpha [$alpha $digit ! \_ \']* \"  {\s -> String s}
 
 {
 -- Each action has type :: String -> Token
@@ -74,8 +72,8 @@ data Token =
   Else           |
   Assign         |
   Then           |
-  Write          |
   For            |
+  While          |
   Switch         |
   Case           |
   LessEq         |
@@ -96,7 +94,7 @@ data Token =
   Type String    |
   Id String      |
   Int Int        |
-  String String  |
+  String String  
   deriving (Eq, Show)
 
 main = do
