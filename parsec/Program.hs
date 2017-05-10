@@ -54,6 +54,8 @@ instance Show Type where
 data Statement =  
 	-- If (expression, block) 
 	If Expr [Statement]
+	-- Switch
+	| Switch Expr [(Expr, [Statement])]
 	-- Attribuition (id, expression)
 	| Attr String Expr
 --	  If BoolExpr [Statement]
@@ -62,7 +64,7 @@ data Statement =
 --	| Attribuition Var Expr
 --	| CAttr
 instance Show Statement where
-	show (If a b) = "If{" ++ show a ++ "," ++ "}"
+	show (If a b) = "If{" ++ show a ++ "," ++ show b ++ "}"
 	show (Attr a b) = "Attr{" ++ show a ++ "," ++ show b ++ "}" 
 
 ---------------------------------------------------------------------------------------------------
@@ -121,14 +123,14 @@ parseReturnType = do
 	return $ Type t
 
 parseBlock :: Parser [Statement]
-parseBlock = braces (endBy parseStatement semi)
+parseBlock = braces (many parseStatement)
 
 ---------------------------------------------------------------------------------------------------
 -- Statements
 ---------------------------------------------------------------------------------------------------
 
 parseStatement :: Parser Statement
-parseStatement = (try parseAttr) <|> (try parseIf) -- TODO: other statement types
+parseStatement = (try parseAttr) <|> (try parseIf) <|> (tryParseSwitch) -- TODO: other statement types
 
 parseIf :: Parser Statement
 parseIf = do
@@ -142,4 +144,26 @@ parseAttr = do
 	id <- identifier
 	reservedOp "=" 
 	exp <- parseExpr
+	semi
 	return $ Attr id exp
+
+parseSwitch :: Parser Statement
+parseSwitch = do
+	reserved "switch"
+	expr <- parseExpr
+	cases <- many parseCase
+	return $ Switch expr cases
+
+parseCase :: Parser (Expr, [Statement])
+parseCase = do
+	reserved "case"
+	expr <- parseExpr
+	block <- parseBlock
+	return $ (expr, block)
+{-
+switch expr {
+	case expr {
+
+	}
+}
+-}
