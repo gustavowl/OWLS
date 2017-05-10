@@ -4,8 +4,11 @@ import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.Show.Functions
-import Lexer
+import Lexer -- Here is defined Token 
 import Expr
+
+data OWLParser = Parsec [Token] () Program
+data Token = String
 
 ---------------------------------------------------------------------------------------------------
 -- Program (subprograms, main)
@@ -48,23 +51,31 @@ instance Show Type where
 	show(Type n) = show n
 
 ---------------------------------------------------------------------------------------------------
--- Statements - If / While / For / Attribuition / Comp_Attribuition
+-- Statements - Condition / While / For / Attribuition / Comp_Attribuition
 ---------------------------------------------------------------------------------------------------
 -- Statement (genelarization)
 data Statement =  
+<<<<<<< HEAD
 	-- If (expression, block) 
 	If Expr [Statement]
 	-- Switch
 	| Switch Expr [(Expr, [Statement])]
+=======
+	-- Condition (expression, block) 
+	Condition Expr [Statement]
+>>>>>>> 88fcfe12212412cd1795ce4ba14797e44df90307
 	-- Attribuition (id, expression)
 	| Attr String Expr
---	  If BoolExpr [Statement]
 --	| While BoolExpr [Statement]
 --	| For BoolExpr [Statement]
 --	| Attribuition Var Expr
 --	| CAttr
 instance Show Statement where
+<<<<<<< HEAD
 	show (If a b) = "If{" ++ show a ++ "," ++ show b ++ "}"
+=======
+	show (Condition a b) = "If{" ++ show a ++ "," ++ "}"
+>>>>>>> 88fcfe12212412cd1795ce4ba14797e44df90307
 	show (Attr a b) = "Attr{" ++ show a ++ "," ++ show b ++ "}" 
 
 ---------------------------------------------------------------------------------------------------
@@ -130,14 +141,14 @@ parseBlock = braces (many parseStatement)
 ---------------------------------------------------------------------------------------------------
 
 parseStatement :: Parser Statement
-parseStatement = (try parseAttr) <|> (try parseIf) <|> (tryParseSwitch) -- TODO: other statement types
+parseStatement = (try parseAttr) <|> (try parseCondition) <|> (tryParseSwitch) -- TODO: other statement types
 
-parseIf :: Parser Statement
-parseIf = do
+parseCondition :: Parser Statement
+parseCondition = do
 	reserved "if"
 	exp <- parseExpr
 	block <- parseBlock
-	return $ If exp block
+	return $ Condition exp block
 
 parseAttr :: Parser Statement
 parseAttr = do
