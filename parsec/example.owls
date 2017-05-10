@@ -1,7 +1,18 @@
 x : int;
-byuibhj
+
+func bla (a : int, b : int) : int {}
+
+proc ble (k : char) { }
 
 main() {
 	x = 10;
-	return "";
+	y = bla(10);
+	z = y;
+	w = bla(10, 5);
+	n = x * 10 + y - z * -w; 
+	if (w != z) {
+		p = true;
+	}
+	q = p || false;
+	bla = y < x && p || y * z == n + 2;
 }

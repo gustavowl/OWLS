@@ -1,22 +1,18 @@
 module Expr where
 
 import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Expr
+import Text.ParserCombinators.Parsec.Prim
 import Lexer
+import Tokens
 
 ---------------------------------------------------------------------------------------------------
 -- Generic Expression
 ---------------------------------------------------------------------------------------------------
-data Expr = ExprNat Integer | ExprInt Integer | ExprReal Double | ExprBool Bool |
-			ExprID String | ExprFunc String [Expr] |
+data Expr = ExprToken Token | ExprFunc Token [Expr] |
 			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
 
 instance Show Expr where
-	show (ExprNat n) = show n
-	show (ExprInt n) = show n
-	show (ExprReal n) = show n
-	show (ExprBool n) = show n
-	show (ExprID s) = show s
+	show (ExprToken t) = show t
 	show (ExprFunc s e) = show s ++ show e
 	show (ExprUnOp op e) = "(" ++ show op ++ show e ++ ")"
 	show (ExprBinOp op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
@@ -24,24 +20,27 @@ instance Show Expr where
 ---------------------------------------------------------------------------------------------------
 -- Unary Operators
 ---------------------------------------------------------------------------------------------------
-data UnOp = Minus | Not
+data UnOp = Neg | Not
 instance Show UnOp where
 	show (Not) = "not"
-	show (Minus) = "-"
+	show (Neg) = "-"
 
 ---------------------------------------------------------------------------------------------------
 -- Binary Operators
 ---------------------------------------------------------------------------------------------------
-data BinOp = Add | Sub | Mul | Div | And | Or | Equals | Differs | Lt | Gt | Lte | Gte
+data BinOp = Add | Sub | Mul | Div | Mod | Conj | CConj | Disj | CDisj | Eq | Dif | Lt | Gt | Lte | Gte
 instance Show BinOp where
 	show (Add) = "+"
 	show (Sub) = "-"
 	show (Mul) = "*"
 	show (Div) = "/"
-	show (And) = "and"
-	show (Or) = "or"
-	show (Equals) = "=="
-	show (Differs) = "!="
+	show (Mod) = "%"
+	show (Conj) = "and"
+	show (CConj) = "cand"
+	show (Disj) = "or"
+	show (CDisj) = "cor"
+	show (Eq) = "=="
+	show (Dif) = "!="
 	show (Lt) = "<"
 	show (Gt) = ">"
 	show (Lte) = "<="
@@ -51,10 +50,10 @@ instance Show BinOp where
 -- Grammar
 ---------------------------------------------------------------------------------------------------
 
-parseExpr :: Parser Expr
+parseExpr :: OWLParser Expr
 parseExpr = parseOrChain
 
-parseExprLeaf :: Parser Expr
+parseExprLeaf :: OWLParser Expr
 parseExprLeaf = (try parseUnary)
 	<|> (try parseLiteral)
 	<|> (try parseFuncCall)
@@ -65,220 +64,222 @@ parseExprLeaf = (try parseUnary)
 -- Grammar - Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseID :: Parser Expr
+parseID :: OWLParser Expr
 parseID = do
 	id <- identifier
-	return $ ExprID id
+	return $ ExprToken id
 
-parseFuncCall :: Parser Expr
+parseFuncCall :: OWLParser Expr
 parseFuncCall = do
 	id <- identifier
 	args <- parseArguments
 	return $ ExprFunc id args
 
-parseArguments :: Parser [Expr]
+parseArguments :: OWLParser [Expr]
 parseArguments = parens (sepBy parseExpr comma)
 
-parseLiteral :: Parser Expr
+parseLiteral :: OWLParser Expr
 parseLiteral = parseNumber <|> parseBool
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Numeric Leaf Terms
+-- Grammar - Literal Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseNumber :: Parser Expr
+parseNumber :: OWLParser Expr
 parseNumber = parseNatural <|> parseInteger <|> parseReal
 
-parseNatural :: Parser Expr
+parseNatural :: OWLParser Expr
 parseNatural = do
 	n <- natural
-	return $ ExprInt n
+	return $ ExprToken n
 
-parseInteger :: Parser Expr
+parseInteger :: OWLParser Expr
 parseInteger = do
 	n <- integer
-	return $ ExprNat n
+	return $ ExprToken n
 
-parseReal :: Parser Expr
+parseReal :: OWLParser Expr
 parseReal = do
-	n <- float
-	return $ ExprReal n
+	n <- real
+	return $ ExprToken n
 
----------------------------------------------------------------------------------------------------
--- Grammar - Boolean Leaf Terms
----------------------------------------------------------------------------------------------------
-
-parseBool :: Parser Expr
-parseBool = parseTrue <|> parseFalse
-
-parseTrue :: Parser Expr
-parseTrue = do
-	reserved "true"
-	return $ ExprBool True
-
-parseFalse:: Parser Expr
-parseFalse = do
-	reserved "false"
-	return $ ExprBool False
+parseBool :: OWLParser Expr
+parseBool = do
+	n <- boolean
+	return $ ExprToken n
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseUnary :: Parser Expr
+parseUnary :: OWLParser Expr
 parseUnary = parseMinus <|> parseNot
 
-parseMinus :: Parser Expr
+parseMinus :: OWLParser Expr
 parseMinus = do
 	op <- try parseMinusOp
 	e <- try parseExprLeaf
 	return $ ExprUnOp op e
 
-parseMinusOp :: Parser UnOp
+parseMinusOp :: OWLParser UnOp
 parseMinusOp = do
-	reservedOp "-"
-	return $ Minus
+	minusToken
+	return $ Neg
 
-parseNot :: Parser Expr
+parseNot :: OWLParser Expr
 parseNot = do
 	op <- try parseNotOp
 	e <- try parseExprLeaf
 	return $ ExprUnOp op e
 
-parseNotOp :: Parser UnOp
+parseNotOp :: OWLParser UnOp
 parseNotOp = do
-	reserved "not"
+	exclamationToken
 	return $ Not
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Logic Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseOrChain :: Parser Expr
+parseOrChain :: OWLParser Expr
 parseOrChain = (try parseOrChainTail) <|> (try parseAndChain)
 
-parseOrChainTail :: Parser Expr
+parseOrChainTail :: OWLParser Expr
 parseOrChainTail = do
 	e1 <- parseAndChain
-	op <- parseOrOp
+	op <- parseOrOp <|> parseCOrOp
 	e2 <- parseOrChain
 	return $ ExprBinOp op e1 e2
 
-parseOrOp :: Parser BinOp
+parseOrOp :: OWLParser BinOp
 parseOrOp = do
-	reserved "or"
-	return $ Or
+	orToken
+	return $ Disj
 
-parseAndChain :: Parser Expr
+parseCOrOp :: OWLParser BinOp
+parseCOrOp = do
+	corToken
+	return $ CDisj
+
+parseAndChain :: OWLParser Expr
 parseAndChain = (try parseAndChainTail) <|> (try parseEqChain)
 
-parseAndChainTail :: Parser Expr
+parseAndChainTail :: OWLParser Expr
 parseAndChainTail = do
 	e1 <- parseEqChain
-	op <- parseAndOp
+	op <- parseAndOp <|> parseCAndOp
 	e2 <- parseAndChain
 	return $ ExprBinOp op e1 e2
 
-parseAndOp :: Parser BinOp
+parseAndOp :: OWLParser BinOp
 parseAndOp = do
-	reserved "and"
-	return $ And
+	andToken
+	return $ Conj
+
+parseCAndOp :: OWLParser BinOp
+parseCAndOp = do
+	candToken
+	return $ CConj
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Relational Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseEqChain :: Parser Expr
+parseEqChain :: OWLParser Expr
 parseEqChain = (try parseEqChainTail) <|> (try parseRelational)
 
-parseEqChainTail :: Parser Expr
+parseEqChainTail :: OWLParser Expr
 parseEqChainTail = do
 	e1 <- parseRelational
 	op <- parseEqualsOp <|> parseDiffersOp
 	e2 <- parseEqChain
 	return $ ExprBinOp op e1 e2
 
-parseEqualsOp :: Parser BinOp
+parseEqualsOp :: OWLParser BinOp
 parseEqualsOp = do
-	reservedOp "=="
-	return $ Equals
+	eqToken
+	return $ Eq
 
-parseDiffersOp :: Parser BinOp
+parseDiffersOp :: OWLParser BinOp
 parseDiffersOp = do
-	reservedOp "!="
-	return $ Differs
+	difToken
+	return $ Dif
 
-parseRelational :: Parser Expr
+parseRelational :: OWLParser Expr
 parseRelational = (try parseRelationalTail) <|> (try parseAddChain)
 
-parseRelationalTail :: Parser Expr
+parseRelationalTail :: OWLParser Expr
 parseRelationalTail = do
 	e1 <- parseAddChain
 	op <- parseLtOp <|> parseGtOp <|> parseLteOp <|> parseGteOp
 	e2 <- parseAddChain
 	return $ ExprBinOp op e1 e2
 
-parseLtOp :: Parser BinOp
+parseLtOp :: OWLParser BinOp
 parseLtOp = do
-	reservedOp "<"
+	lessToken
 	return $ Lt
 
-parseGtOp :: Parser BinOp
+parseGtOp :: OWLParser BinOp
 parseGtOp = do
-	reservedOp ">"
+	greaterToken
 	return $ Gt
 
-parseLteOp :: Parser BinOp
+parseLteOp :: OWLParser BinOp
 parseLteOp = do
-	reservedOp "<="
+	lessEqToken
 	return $ Lte
 
-parseGteOp :: Parser BinOp
+parseGteOp :: OWLParser BinOp
 parseGteOp = do
-	reservedOp ">="
+	greaterEqToken
 	return $ Gte
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Numeric Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseAddChain :: Parser Expr
+parseAddChain :: OWLParser Expr
 parseAddChain = (try parseAddChainTail) <|> (try parseMulChain)
 
-parseAddChainTail :: Parser Expr
+parseAddChainTail :: OWLParser Expr
 parseAddChainTail = do
 	e1 <- parseMulChain
 	op <- parseAddOp <|> parseSubOp
 	e2 <- parseAddChain
 	return $ ExprBinOp op e1 e2
 
-parseAddOp :: Parser BinOp
+parseAddOp :: OWLParser BinOp
 parseAddOp = do
-	reservedOp "+"
+	plusToken
 	return $ Add
 
-parseSubOp :: Parser BinOp
+parseSubOp :: OWLParser BinOp
 parseSubOp = do
-	reservedOp "-"
+	minusToken
 	return $ Sub
 
-parseMulChain :: Parser Expr
+parseMulChain :: OWLParser Expr
 parseMulChain = (try parseMulChainTail) <|> (try parseExprLeaf)
 
-parseMulChainTail :: Parser Expr
+parseMulChainTail :: OWLParser Expr
 parseMulChainTail = do
 	e1 <- parseExprLeaf
-	op <- parseMulOp <|> parseDivOp
+	op <- parseMulOp <|> parseDivOp <|> parseModOp
 	e2 <- parseMulChain
 	return $ ExprBinOp op e1 e2
 
-parseMulOp :: Parser BinOp
+parseMulOp :: OWLParser BinOp
 parseMulOp = do
-	reservedOp "*"
+	timesToken
 	return $ Mul
 
-parseDivOp :: Parser BinOp
+parseDivOp :: OWLParser BinOp
 parseDivOp = do
-	reservedOp "/"
+	divideToken
 	return $ Div
 
+parseModOp :: OWLParser BinOp
+parseModOp = do
+	modulusToken
+	return $ Mod
