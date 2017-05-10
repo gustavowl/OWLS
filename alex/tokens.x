@@ -12,7 +12,7 @@ $alpha = [a-zA-Z]   -- alphabetic characters
 tokens :-
 
   $white+                              ;
-  "#".*                               ; -- comentario de linha
+  "#".*                                ; -- comentario de linha
   main                                 { \s -> Main }
   func                                 { \s -> Func }
   proc                                 { \s -> Proc }
@@ -52,9 +52,9 @@ tokens :-
   break                                { \s -> Break}
   then                                 { \s -> Then}
   print                                { \s -> Write}
-  $digit+ [\-\+]?                      { \s -> Nat (read s) }
-  @decimal \. @decimal @exponent?
-  | @decimal @exponent                 { \s -> Real (read s)}
+  $digit+                              { \s -> Nat (read s) }
+  [\-]?$digit+                         { \s -> Int (read s) }
+  [\-]?$digit+ \. $digit+              { \s -> Real (read s)}
   $alpha [$alpha $digit \_ \']*        { \s -> Id s }
   \" $alpha [$alpha $digit ! \_ \']* \"  { \s -> String s}
 
@@ -106,6 +106,7 @@ data Token =
   Type String |
   Id String |
   Nat Int |
+  Int Int |
   Real Double |
   String String
   deriving (Eq,Show)
