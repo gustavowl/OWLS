@@ -6,8 +6,49 @@ module Main (main) where
 
 $digit = 0-9      -- digits
 $alpha = [a-zA-Z]   -- alphabetic characters
+
+$whitechar = [ \t\n\r\f\v]
+$special   = [\(\)\,\;\[\]\`\{\}]
+
+$ascdigit  = 0-9
+$unidigit  = [] -- TODO
+$digit     = [$ascdigit $unidigit]
+
+$ascsymbol = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
+$unisymbol = [] -- TODO
+$symbol    = [$ascsymbol $unisymbol] # [$special \_\:\"\']
+$large     = [A-Z \xc0-\xd6 \xd8-\xde]
+$small     = [a-z \xdf-\xf6 \xf8-\xff \_]
+$alpha     = [$small $large]
+$graphic   = [$small $large $symbol $digit $special \:\"\']
+$octit	   = 0-7
+$hexit     = [0-9 A-F a-f]
+$idchar    = [$alpha $digit \']
+$symchar   = [$symbol \:]
+$nl        = [\n\r]
+@reservedid = 
+	as|case|class|data|default|deriving|do|else|hiding|if|
+	import|in|infix|infixl|infixr|instance|let|module|newtype|
+	of|qualified|then|type|where
+@reservedop =
+	".." | ":" | "::" | "=" | \\ | "|" | "<-" | "->" | "@" | "~" | "=>"
+@varid  = $small $idchar*
+@conid  = $large $idchar*
+@varsym = $symbol $symchar*
+@consym = \: $symchar*
 @decimal     = $digit+
+@octal       = $octit+
+@hexadecimal = $hexit+
 @exponent    = [eE] [\-\+] @decimal
+$cntrl   = [$large \@\[\\\]\^\_]
+@ascii   = \^ $cntrl | NUL | SOH | STX | ETX | EOT | ENQ | ACK
+	 | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE
+	 | DC1 | DC2 | DC3 | DC4 | NAK | SYN | ETB | CAN | EM
+	 | SUB | ESC | FS | GS | RS | US | SP | DEL
+$charesc = [abfnrtv\\\"\'\&]
+@escape  = \\ ($charesc | @ascii | @decimal | o @octal | x @hexadecimal)
+@gap     = \\ $whitechar+ \\
+@string  = $graphic # [\"\\] | " " | @escape | @gap
 
 tokens :-
 
@@ -23,25 +64,22 @@ tokens :-
   ")"                                  { \s -> RParen}
   "{"                                  { \s -> LBrace}
   "}"                                  { \s -> RBrace}
-  int                                  { \s -> Type s}
-  nat                                  { \s -> Type s}
-  real                                 { \s -> Type s}
   "="                                  { \s -> Assign}
-  "/"                                  { \s -> Divide}
-  "*"                                  { \s -> Times}
-  "-"                                  { \s -> Minus}
-  "+"                                  { \s -> Plus}
-  "%"                                  { \s -> Module}
-  "||"                                 { \s -> Or_cir}
-  "|"                                  { \s -> Or}
-  "&&"                                 { \s -> And_cir}
-  "&"                                  { \s -> And}
-  "=="                                 { \s -> Equals}
-  "!="                                 { \s -> Not_Equals}
-  "<"                                  { \s -> Less}
-  ">"                                  { \s -> Greater}
-  "<="                                 { \s -> LessEq}
-  ">="                                 { \s -> GreaterEq}
+  "/"                                  { \s -> DivOp}
+  "*"                                  { \s -> MultOp}
+  "-"                                  { \s -> SubOp}
+  "+"                                  { \s -> AddOp}
+  "%"                                  { \s -> ModOp}
+  "||"                                 { \s -> OrOp}
+  "|"                                  { \s -> OrOpSC}
+  "&&"                                 { \s -> AndOp}
+  "&"                                  { \s -> AndOpSC}
+  "=="                                 { \s -> EqOp}
+  "!="                                 { \s -> DiffOp}
+  "<"                                  { \s -> LtOp}
+  ">"                                  { \s -> GtOp}
+  "<="                                 { \s -> LtEqOp}
+  ">="                                 { \s -> GtEqOp}
   if                                   { \s -> If}
   else                                 { \s -> Else}
   for                                  { \s -> For}
@@ -50,13 +88,18 @@ tokens :-
   case                                 {\s -> Case}
   return                               { \s -> Return}
   break                                { \s -> Break}
-  then                                 { \s -> Then}
+  int                                  { \s -> Type s}
+  nat                                  { \s -> Type s}
+  real                                 { \s -> Type s}
+  char                                 { \s -> Type s}
   print                                { \s -> Write}
+  scan                                 { \s -> Get}
   $digit+                              { \s -> Nat (read s) }
-  [\-]?$digit+                         { \s -> Int (read s) }
-  [\-]?$digit+ \. $digit+              { \s -> Real (read s)}
+  [\-]?@decimal+                       { \s -> Int (read s) }
+  [\-]?@decimal+ \. @decimal+          { \s -> Real (read s)}
   $alpha [$alpha $digit \_ \']*        { \s -> Id s }
-  \" $alpha [$alpha $digit ! \_ \']* \"  { \s -> String s}
+  \" @string* \"  					   { \s -> String s}
+  \' @string?  \'                      { \s -> Char s}
 
 
 
@@ -78,36 +121,38 @@ data Token =
   LBrace |
   RBrace |
   Assign    | 
-  Divide    |
-  Times     |
-  Minus     |
-  Plus      |
-  Module    |
-  Or_cir    |
-  Or        |
-  And_cir   |
-  And       |
-  Equals    |
-  Not_Equals |
-  Less      |
-  Greater    |
-  LessEq |
-  GreaterEq |
-  If  |
-  Else |  
-  For |
-  While |
-  Switch |
-  Case   |
-  Return |
-  Break  |
-  Then |
-  Write |
+  DivOp     |
+  MultOp    |
+  SubOp     |
+  AddOp     |
+  ModOp     |
+  OrOp      |
+  OrOpSC    |
+  AndOp     |
+  AndOpSC   |
+  EqOp      |
+  DiffOp    |
+  LtOp      |
+  GtOp      |
+  LtEqOp    |
+  GtEqOp    |
+  If        |
+  Else      |  
+  For       |
+  While     |
+  Switch    |
+  Case      | 
+  Return    |
+  Break     |
+  Then      |
+  Write     |
+  Get       |
   Type String |
   Id String |
   Nat Int |
   Int Int |
   Real Double |
+  Char String |
   String String
   deriving (Eq,Show)
 
