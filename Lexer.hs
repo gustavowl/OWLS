@@ -145,6 +145,11 @@ lessEqToken = tokenPrim show update_pos (simpleGetToken LessEq)
 -- Character chains
 ---------------------------------------------------------------------------------------------------
 
+boolean :: LexParser
+boolean = tokenPrim show update_pos get_token where
+	get_token (Token (Bool a) l c) = Just (Token (Bool a) l c)
+	get_token _ = Nothing
+
 natural :: LexParser
 natural = tokenPrim show update_pos get_token where
 	get_token (Token (Nat n) l c) = Just (Token (Nat n) l c)
@@ -160,9 +165,14 @@ real = tokenPrim show update_pos get_token where
 	get_token (Token (Real n) l c) = Just (Token (Real n) l c)
 	get_token _ = Nothing
 
-boolean :: LexParser
-boolean = tokenPrim show update_pos get_token where
-	get_token (Token (Bool a) l c) = Just (Token (Bool a) l c)
+cchar :: LexParser
+cchar = tokenPrim show update_pos get_token where
+	get_token (Token (Char s) l c) = Just (Token (Char s) l c)
+	get_token _ = Nothing
+
+sstring :: LexParser
+sstring = tokenPrim show update_pos get_token where
+	get_token (Token (String s) l c) = Just (Token (String s) l c)
 	get_token _ = Nothing
 
 identifier :: LexParser

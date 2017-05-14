@@ -8,11 +8,12 @@ import Tokens
 ---------------------------------------------------------------------------------------------------
 -- Generic Expression
 ---------------------------------------------------------------------------------------------------
-data Expr = ExprToken Token | ExprFunc Token [Expr] |
+data Expr = ExprToken Token | ExprFunc Token [Expr] | ExprString Token |
 			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
 
 instance Show Expr where
 	show (ExprToken t) = show t
+	show (ExprString t) = show t
 	show (ExprFunc s e) = show s ++ show e
 	show (ExprUnOp op e) = "(" ++ show op ++ show e ++ ")"
 	show (ExprBinOp op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
@@ -79,7 +80,7 @@ parseArguments :: OWLParser [Expr]
 parseArguments = parens (sepBy parseExpr comma)
 
 parseLiteral :: OWLParser Expr
-parseLiteral = parseNumber <|> parseBool
+parseLiteral = parseNumber <|> parseBool <|> parseChar <|> parseString
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Literal Leaf Terms
@@ -87,6 +88,11 @@ parseLiteral = parseNumber <|> parseBool
 
 parseNumber :: OWLParser Expr
 parseNumber = parseNatural <|> parseInteger <|> parseReal
+
+parseBool :: OWLParser Expr
+parseBool = do
+	n <- boolean
+	return $ ExprToken n
 
 parseNatural :: OWLParser Expr
 parseNatural = do
@@ -103,10 +109,15 @@ parseReal = do
 	n <- real
 	return $ ExprToken n
 
-parseBool :: OWLParser Expr
-parseBool = do
-	n <- boolean
-	return $ ExprToken n
+parseChar :: OWLParser Expr
+parseChar = do
+	id <- cchar
+	return $ ExprString id
+
+parseString :: OWLParser Expr
+parseString = do
+	id <- sstring
+	return $ ExprString id
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators

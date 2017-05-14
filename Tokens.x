@@ -6,8 +6,58 @@ module Tokens where
 
 $digit = 0-9      -- digits
 $alpha = [a-zA-Z]   -- alphabetic characters
+
+
+
+$whitechar = [ \t\n\r\f\v]
+$special   = [\(\)\,\;\[\]\`\{\}]
+$ascdigit  = 0-9
+$unidigit  = [] -- TODO
+$digit     = [$ascdigit $unidigit]
+$ascsymbol = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
+$unisymbol = [] -- TODO
+$symbol    = [$ascsymbol $unisymbol] # [$special \_\:\"\']
+$large     = [A-Z \xc0-\xd6 \xd8-\xde]
+$small     = [a-z \xdf-\xf6 \xf8-\xff \_]
+$alpha     = [$small $large]
+$graphic   = [$small $large $symbol $digit $special \:\"\']
+$octit     = 0-7
+$hexit     = [0-9 A-F a-f]
+$idchar    = [$alpha $digit \']
+$symchar   = [$symbol \:]
+$nl        = [\n\r]
+
+@reservedid = 
+  as|case|class|data|default|deriving|do|else|hiding|if|
+  import|in|infix|infixl|infixr|instance|let|module|newtype|
+  of|qualified|then|type|where
+@reservedop =
+  ".." | ":" | "::" | "=" | \\ | "|" | "<-" | "->" | "@" | "~" | "=>"
+@varid  = $small $idchar*
+@conid  = $large $idchar*
+@varsym = $symbol $symchar*
+@consym = \: $symchar*
 @decimal     = $digit+
+@octal       = $octit+
+@hexadecimal = $hexit+
 @exponent    = [eE] [\-\+] @decimal
+$cntrl   = [$large \@\[\\\]\^\_]
+@ascii   = \^ $cntrl | NUL | SOH | STX | ETX | EOT | ENQ | ACK
+   | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE
+   | DC1 | DC2 | DC3 | DC4 | NAK | SYN | ETB | CAN | EM
+   | SUB | ESC | FS | GS | RS | US | SP | DEL
+$charesc = [abfnrtv\\\"\'\&]
+@escape  = \\ ($charesc | @ascii | @decimal | o @octal | x @hexadecimal)
+@gap     = \\ $whitechar+ \\
+@string  = $graphic # [\"\\] | " " | @escape | @gap
+
+
+
+
+
+
+
+
 
 tokens :-
 
@@ -23,9 +73,11 @@ tokens :-
   ")"                                  { \p s -> newToken p RParen }
   "{"                                  { \p s -> newToken p LBrace }
   "}"                                  { \p s -> newToken p RBrace }
-  int                                  { \p s -> newToken p (Id s) }
+  bool                                 { \p s -> newToken p (Id s) }
   nat                                  { \p s -> newToken p (Id s) }
+  int                                  { \p s -> newToken p (Id s) }
   real                                 { \p s -> newToken p (Id s) }
+  char                                 { \p s -> newToken p (Id s) }
   "="                                  { \p s -> newToken p Assign}
   "/"                                  { \p s -> newToken p Divide}
   "*"                                  { \p s -> newToken p Times}
@@ -54,10 +106,12 @@ tokens :-
   return                               { \p s -> newToken p Return}
   break                                { \p s -> newToken p Break}
   $digit+                              { \p s -> newToken p (Nat (read s)) }
-  [\-]?$digit+                         { \p s -> newToken p (Int (read s)) }
-  [\-]?$digit+ \. $digit+              { \p s -> newToken p (Real (read s)) }
+  [\-]?@decimal+                         { \p s -> newToken p (Int (read s)) }
+  [\-]?@decimal+ \. @decimal+               { \p s -> newToken p (Real (read s)) }
   $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s) }
   \" $alpha [$alpha $digit ! \_ \']* \"  { \p s -> newToken p (Str s) }
+  \" @string* \"                       {\p s -> newToken p (String  (read s))}
+  \' @string? \'                      {\p s -> newToken p (Char (read s))}
 
 {
 
@@ -107,6 +161,8 @@ data TokenType =
   Nat Int |
   Int Int |
   Real Double |
+  Char String |
+  String String |
   Str String
   deriving (Eq,Show)
 

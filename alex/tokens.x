@@ -21,17 +21,17 @@ $large     = [A-Z \xc0-\xd6 \xd8-\xde]
 $small     = [a-z \xdf-\xf6 \xf8-\xff \_]
 $alpha     = [$small $large]
 $graphic   = [$small $large $symbol $digit $special \:\"\']
-$octit	   = 0-7
+$octit     = 0-7
 $hexit     = [0-9 A-F a-f]
 $idchar    = [$alpha $digit \']
 $symchar   = [$symbol \:]
 $nl        = [\n\r]
 @reservedid = 
-	as|case|class|data|default|deriving|do|else|hiding|if|
-	import|in|infix|infixl|infixr|instance|let|module|newtype|
-	of|qualified|then|type|where
+  as|case|class|data|default|deriving|do|else|hiding|if|
+  import|in|infix|infixl|infixr|instance|let|module|newtype|
+  of|qualified|then|type|where
 @reservedop =
-	".." | ":" | "::" | "=" | \\ | "|" | "<-" | "->" | "@" | "~" | "=>"
+  ".." | ":" | "::" | "=" | \\ | "|" | "<-" | "->" | "@" | "~" | "=>"
 @varid  = $small $idchar*
 @conid  = $large $idchar*
 @varsym = $symbol $symchar*
@@ -42,9 +42,9 @@ $nl        = [\n\r]
 @exponent    = [eE] [\-\+] @decimal
 $cntrl   = [$large \@\[\\\]\^\_]
 @ascii   = \^ $cntrl | NUL | SOH | STX | ETX | EOT | ENQ | ACK
-	 | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE
-	 | DC1 | DC2 | DC3 | DC4 | NAK | SYN | ETB | CAN | EM
-	 | SUB | ESC | FS | GS | RS | US | SP | DEL
+   | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE
+   | DC1 | DC2 | DC3 | DC4 | NAK | SYN | ETB | CAN | EM
+   | SUB | ESC | FS | GS | RS | US | SP | DEL
 $charesc = [abfnrtv\\\"\'\&]
 @escape  = \\ ($charesc | @ascii | @decimal | o @octal | x @hexadecimal)
 @gap     = \\ $whitechar+ \\
@@ -98,7 +98,7 @@ tokens :-
   [\-]?@decimal+                       { \s -> Int (read s) }
   [\-]?@decimal+ \. @decimal+          { \s -> Real (read s)}
   $alpha [$alpha $digit \_ \']*        { \s -> Id s }
-  \" @string* \"  					   { \s -> String s}
+  \" @string* \"               { \s -> String s}
   \' @string?  \'                      { \s -> Char s}
 
 
