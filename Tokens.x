@@ -51,14 +51,6 @@ $charesc = [abfnrtv\\\"\'\&]
 @gap     = \\ $whitechar+ \\
 @string  = $graphic # [\"\\] | " " | @escape | @gap
 
-
-
-
-
-
-
-
-
 tokens :-
 
   $white+                              ;
@@ -105,13 +97,12 @@ tokens :-
   case                                 { \p s -> newToken p Case}
   return                               { \p s -> newToken p Return}
   break                                { \p s -> newToken p Break}
-  $digit+                              { \p s -> newToken p (Nat (read s)) }
-  [\-]?@decimal+                         { \p s -> newToken p (Int (read s)) }
-  [\-]?@decimal+ \. @decimal+               { \p s -> newToken p (Real (read s)) }
-  $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s) }
-  \" $alpha [$alpha $digit ! \_ \']* \"  { \p s -> newToken p (Str s) }
-  \" @string* \"                       {\p s -> newToken p (String  (read s))}
-  \' @string? \'                      {\p s -> newToken p (Char (read s))}
+  $digit+                              { \p s -> newToken p (Nat (read s))}
+  [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
+  [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
+  $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s)}
+  \" @string* \"                       {\p s -> newToken p (String (read s))}
+  \' @string? \'                       {\p s -> newToken p (Char (read s))}
 
 {
 
@@ -161,9 +152,8 @@ data TokenType =
   Nat Int |
   Int Int |
   Real Double |
-  Char String |
-  String String |
-  Str String
+  Char Char |
+  String String 
   deriving (Eq,Show)
 
 newToken :: AlexPosn -> TokenType -> Token
