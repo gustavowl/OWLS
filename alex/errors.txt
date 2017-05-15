@@ -1,5 +1,0 @@
-  \-? $digit+ \. $digit*               {\s -> Real (read s)}
-  $digit+                              {\s -> Nat (read s)}
-
-  Real Real      |
-  Nat Nat        |
