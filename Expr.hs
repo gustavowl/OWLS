@@ -8,7 +8,7 @@ import Tokens
 ---------------------------------------------------------------------------------------------------
 -- Generic Expression
 ---------------------------------------------------------------------------------------------------
-data Expr = ExprToken Token | ExprFunc Token [Expr] |
+data Expr = ExprToken TokenType | ExprFunc TokenType [Expr] |
 			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
 
 instance Show Expr where

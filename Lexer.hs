@@ -4,63 +4,58 @@ import Data.Functor.Identity
 import Text.Parsec.Prim
 import Text.ParserCombinators.Parsec.Pos
 import Tokens
-
-data OWLState = OWLState [String]
+import State
 
 type OWLParser = ParsecT [Token] OWLState Identity
-type LexParser = OWLParser Token
+type LexParser = OWLParser TokenType
 
 ---------------------------------------------------------------------------------------------------
 -- Program key words
 ---------------------------------------------------------------------------------------------------
 
 mainToken :: LexParser
-mainToken = tokenPrim show update_pos (simpleGetToken Main)
+mainToken = tokenPrim show updatePos (simpleGetToken Main)
 
 funcToken :: LexParser
-funcToken = tokenPrim show update_pos get_token where
-	get_token (Token Func l c) = Just (Token Func l c)
-	get_token _ = Nothing
+funcToken = tokenPrim show updatePos (simpleGetToken Func)
 
 procToken :: LexParser
-procToken = tokenPrim show update_pos get_token where
-	get_token (Token Proc l c) = Just (Token Proc l c)
-	get_token _ = Nothing
+procToken = tokenPrim show updatePos (simpleGetToken Proc)
 
 ---------------------------------------------------------------------------------------------------
 -- Statement key words
 ---------------------------------------------------------------------------------------------------
 
 ifToken :: LexParser
-ifToken = tokenPrim show update_pos (simpleGetToken If)
+ifToken = tokenPrim show updatePos (simpleGetToken If)
 
 elseToken :: LexParser
-elseToken = tokenPrim show update_pos (simpleGetToken Else)
+elseToken = tokenPrim show updatePos (simpleGetToken Else)
 
 switchToken :: LexParser
-switchToken = tokenPrim show update_pos (simpleGetToken Switch)
+switchToken = tokenPrim show updatePos (simpleGetToken Switch)
 
 caseToken :: LexParser
-caseToken = tokenPrim show update_pos (simpleGetToken Case)
+caseToken = tokenPrim show updatePos (simpleGetToken Case)
 
 ---------------------------------------------------------------------------------------------------
 -- Characters / symbols
 ---------------------------------------------------------------------------------------------------
 
 comma :: LexParser
-comma = tokenPrim show update_pos (simpleGetToken Comma)
+comma = tokenPrim show updatePos (simpleGetToken Comma)
 
 colon :: LexParser
-colon = tokenPrim show update_pos (simpleGetToken Colon)
+colon = tokenPrim show updatePos (simpleGetToken Colon)
 
 semi :: LexParser
-semi = tokenPrim show update_pos (simpleGetToken SemiColon)
+semi = tokenPrim show updatePos (simpleGetToken SemiColon)
 
 lparen :: LexParser
-lparen = tokenPrim show update_pos (simpleGetToken LParen)
+lparen = tokenPrim show updatePos (simpleGetToken LParen)
 
 rparen :: LexParser
-rparen = tokenPrim show update_pos (simpleGetToken RParen)
+rparen = tokenPrim show updatePos (simpleGetToken RParen)
 
 parens :: OWLParser a -> OWLParser a
 parens p = do
@@ -70,10 +65,10 @@ parens p = do
 	return $ s
 
 lbrace :: LexParser
-lbrace = tokenPrim show update_pos (simpleGetToken LBrace)
+lbrace = tokenPrim show updatePos (simpleGetToken LBrace)
 
 rbrace :: LexParser
-rbrace = tokenPrim show update_pos (simpleGetToken RBrace)
+rbrace = tokenPrim show updatePos (simpleGetToken RBrace)
 
 braces :: OWLParser a -> OWLParser a
 braces p = do
@@ -87,98 +82,97 @@ braces p = do
 ---------------------------------------------------------------------------------------------------
 
 plusToken :: LexParser
-plusToken = tokenPrim show update_pos (simpleGetToken Plus)
+plusToken = tokenPrim show updatePos (simpleGetToken Plus)
 
 minusToken :: LexParser
-minusToken = tokenPrim show update_pos (simpleGetToken Minus)
+minusToken = tokenPrim show updatePos (simpleGetToken Minus)
 
 timesToken :: LexParser
-timesToken = tokenPrim show update_pos (simpleGetToken Times)
+timesToken = tokenPrim show updatePos (simpleGetToken Times)
 
 divideToken :: LexParser
-divideToken = tokenPrim show update_pos (simpleGetToken Divide)
+divideToken = tokenPrim show updatePos (simpleGetToken Divide)
 
 modulusToken :: LexParser
-modulusToken = tokenPrim show update_pos (simpleGetToken Modulus)
+modulusToken = tokenPrim show updatePos (simpleGetToken Modulus)
 
 assignToken :: LexParser
-assignToken = tokenPrim show update_pos (simpleGetToken Assign)
+assignToken = tokenPrim show updatePos (simpleGetToken Assign)
 
 exclamationToken :: LexParser
-exclamationToken = tokenPrim show update_pos (simpleGetToken Exclamation)
+exclamationToken = tokenPrim show updatePos (simpleGetToken Exclamation)
 
 andToken :: LexParser
-andToken = tokenPrim show update_pos (simpleGetToken And)
+andToken = tokenPrim show updatePos (simpleGetToken And)
 
 orToken :: LexParser
-orToken = tokenPrim show update_pos (simpleGetToken Or)
+orToken = tokenPrim show updatePos (simpleGetToken Or)
 
 candToken :: LexParser
-candToken = tokenPrim show update_pos (simpleGetToken And_cir)
+candToken = tokenPrim show updatePos (simpleGetToken And_cir)
 
 corToken :: LexParser
-corToken = tokenPrim show update_pos (simpleGetToken Or_cir)
+corToken = tokenPrim show updatePos (simpleGetToken Or_cir)
 
 ---------------------------------------------------------------------------------------------------
 -- Relational
 ---------------------------------------------------------------------------------------------------
 
 eqToken :: LexParser
-eqToken = tokenPrim show update_pos (simpleGetToken Equals)
+eqToken = tokenPrim show updatePos (simpleGetToken Equals)
 
 difToken :: LexParser
-difToken = tokenPrim show update_pos (simpleGetToken Not_Equals)
+difToken = tokenPrim show updatePos (simpleGetToken Not_Equals)
 
 greaterToken :: LexParser
-greaterToken = tokenPrim show update_pos (simpleGetToken Greater)
+greaterToken = tokenPrim show updatePos (simpleGetToken Greater)
 
 greaterEqToken :: LexParser
-greaterEqToken = tokenPrim show update_pos (simpleGetToken GreaterEq)
+greaterEqToken = tokenPrim show updatePos (simpleGetToken GreaterEq)
 
 lessToken :: LexParser
-lessToken = tokenPrim show update_pos (simpleGetToken Less)
+lessToken = tokenPrim show updatePos (simpleGetToken Less)
 
 lessEqToken :: LexParser
-lessEqToken = tokenPrim show update_pos (simpleGetToken LessEq)
+lessEqToken = tokenPrim show updatePos (simpleGetToken LessEq)
 
 ---------------------------------------------------------------------------------------------------
 -- Character chains
 ---------------------------------------------------------------------------------------------------
 
 natural :: LexParser
-natural = tokenPrim show update_pos get_token where
-	get_token (Token (Nat n) l c) = Just (Token (Nat n) l c)
-	get_token _ = Nothing
+natural = tokenPrim show updatePos getToken where
+	getToken (Token (Nat n) l c) = Just (Nat n)
+	getToken _ = Nothing
 
 integer :: LexParser
-integer = tokenPrim show update_pos get_token where
-	get_token (Token (Int n) l c) = Just (Token (Int n) l c)
-	get_token _ = Nothing
+integer = tokenPrim show updatePos getToken where
+	getToken (Token (Int n) l c) = Just (Int n)
+	getToken _ = Nothing
 
 real :: LexParser
-real = tokenPrim show update_pos get_token where
-	get_token (Token (Real n) l c) = Just (Token (Real n) l c)
-	get_token _ = Nothing
+real = tokenPrim show updatePos getToken where
+	getToken (Token (Real n) l c) = Just (Real n)
+	getToken _ = Nothing
 
 boolean :: LexParser
-boolean = tokenPrim show update_pos get_token where
-	get_token (Token (Bool a) l c) = Just (Token (Bool a) l c)
-	get_token _ = Nothing
+boolean = tokenPrim show updatePos getToken where
+	getToken (Token (Bool a) l c) = Just (Bool a)
+	getToken _ = Nothing
 
 identifier :: LexParser
-identifier = tokenPrim show update_pos get_token where
-	get_token (Token (Id s) l c) = Just (Token (Id s) l c)
-	get_token _ = Nothing
+identifier = tokenPrim show updatePos getToken where
+	getToken (Token (Id s) l c) = Just (Id s)
+	getToken _ = Nothing
 
 ---------------------------------------------------------------------------------------------------
 -- Default functions
 ---------------------------------------------------------------------------------------------------
 
---update_pos :: SourcePos -> Token -> Vector Token -> SourcePos
-update_pos p (Token t l c) _ = newPos (sourceName p) l c
+updatePos p (Token t l c) _ = newPos (sourceName p) l c
 
 simpleGetToken toktype (Token t l c) = 
 	if toktype == t then 
-		Just (Token t l c) 
+		Just t
 	else 
 		Nothing

@@ -5,40 +5,48 @@ import Text.ParserCombinators.Parsec
 import Text.Show.Functions
 import Lexer
 import Expr
-import qualified Tokens as T
+import Tokens
 
 ---------------------------------------------------------------------------------------------------
 -- Program (subprograms, main)
 ---------------------------------------------------------------------------------------------------
 data Program = Program [Function] [Procedure] [Var] Function
 instance Show Program where
-	show(Program f p v m) = "Program{" ++
-		show f ++ "," ++ show p ++ "," ++
-		show v ++ "," ++ show m ++ "}"
+	show(Program f p v m) = "Program { \n" ++
+		"Functions: " ++ show f ++ "\n" ++ 
+		"Procedures: " ++ show p ++ "\n" ++
+		"GlobalVar: " ++ show v ++ "\n" ++ 
+		"Main: " ++ show m ++ "\n}"
 
 ---------------------------------------------------------------------------------------------------
 -- Function (parameters, return type, body)
 ---------------------------------------------------------------------------------------------------
-data Function = Function T.Token [Var] T.Token [Statement] 
+data Function = Function TokenType [Var] TokenType [Statement] 
 instance Show Function where
-	show(Function n p r b) = "Function{" ++ 
-		show n ++ "," ++ show p ++ "," ++ 
-		show r ++ "," ++ show b ++ "}"
+	show(Function id p r b) = "Function { \n" ++ 
+		"\tName: " ++ show id ++ "\n" ++ 
+		"\tParam: " ++ show p ++ "\n" ++ 
+		"\tReturn Type: " ++ show r ++ "\n" ++ 
+		"\tBody: " ++ show b ++ "\n}"
 
 ---------------------------------------------------------------------------------------------------
 -- Procedure (parameters, body)
 ---------------------------------------------------------------------------------------------------
-data Procedure = Procedure T.Token [Var] [Statement] 
+data Procedure = Procedure TokenType [Var] [Statement] 
 instance Show Procedure where
-	show(Procedure n p b) = "Procedure{" ++ 
-		show n ++ "," ++ show p ++ "," ++ show b ++ "}"
+	show(Procedure n p b) = "Procedure { \n" ++ 
+		"\tName: " ++ show id ++ "\n" ++ 
+		"\tParam: " ++ show p ++ "\n" ++ 
+		"\tBody: " ++ show b ++ "\n}"
 
 ---------------------------------------------------------------------------------------------------
 -- Var (name, type)
 ---------------------------------------------------------------------------------------------------
-data Var = Var T.Token T.Token -- TODO
+data Var = Var TokenType TokenType -- TODO
 instance Show Var where
-	show(Var n t) = "Var{" ++ show n ++ "," ++ show t ++ "}"
+	show(Var n t) = "Var { \n" ++ 
+		"\tName: " ++ show n ++ "\n" ++ 
+		"\tType: " ++ show t ++ "\n}"
 
 ---------------------------------------------------------------------------------------------------
 -- Statements - Condition / While / For / Attribuition / Comp_Attribuition
@@ -50,21 +58,21 @@ data Statement =
 	-- Switch
 	| SwitchCase Expr [(Expr, [Statement])]
 	-- Attribuition (id, expression)
-	| Assignment T.Token Expr
+	| Assignment TokenType Expr
 --	| While BoolExpr [Statement]
 --	| For BoolExpr [Statement]
 --	| Attribuition Var Expr
 --	| CAttr
 instance Show Statement where
-	show (Condition a b) = "If{" ++ show a ++ "," ++ "}"
-	show (Assignment a b) = "Assign{" ++ show a ++ "," ++ show b ++ "}" 
+	show (Condition a b) = "If{" ++ show a ++ "," ++ show b ++ "}\n"
+	show (Assignment a b) = "Assign{" ++ show a ++ "," ++ show b ++ "}\n" 
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar
 ---------------------------------------------------------------------------------------------------
 
 parseOWLS :: String -> Either ParseError Program
-parseOWLS input = runParser parseProgram (OWLState []) "" (T.getTokens input)
+parseOWLS input = runParser parseProgram (OWLState []) "" (getTokens input)
 
 parseProgram :: OWLParser Program
 parseProgram = do
@@ -79,7 +87,7 @@ parseMain = do
 	id <- mainToken
 	params <- parseParameters
 	body <- parseBlock
-	return $ Function id params (T.Token (T.Id "char[]") 1 1) body
+	return $ Function id params (Id "char[]") body
 
 parseFunction :: OWLParser Function
 parseFunction =  do
@@ -111,7 +119,7 @@ parseVariable = do
 	t <- identifier
 	return $ Var name t
 
-parseReturnType :: OWLParser T.Token
+parseReturnType :: OWLParser TokenType
 parseReturnType = do
 	colon
 	t <- identifier
