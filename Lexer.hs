@@ -6,9 +6,6 @@ import Text.ParserCombinators.Parsec.Pos
 import Tokens
 import State
 
-type OWLParser = ParsecT [Token] OWLState Identity
-type LexParser = OWLParser TokenType
-
 ---------------------------------------------------------------------------------------------------
 -- Program key words
 ---------------------------------------------------------------------------------------------------
@@ -37,6 +34,9 @@ switchToken = tokenPrim show updatePos (simpleGetToken Switch)
 
 caseToken :: LexParser
 caseToken = tokenPrim show updatePos (simpleGetToken Case)
+
+returnToken :: LexParser
+returnToken = tokenPrim show updatePos (simpleGetToken Return)
 
 ---------------------------------------------------------------------------------------------------
 -- Characters / symbols
@@ -140,6 +140,11 @@ lessEqToken = tokenPrim show updatePos (simpleGetToken LessEq)
 -- Character chains
 ---------------------------------------------------------------------------------------------------
 
+boolean :: LexParser
+boolean = tokenPrim show update_pos get_token where
+	get_token (Token (Bool a) l c) = Just (Bool a)
+	get_token _ = Nothing
+
 natural :: LexParser
 natural = tokenPrim show updatePos getToken where
 	getToken (Token (Nat n) l c) = Just (Nat n)
@@ -160,6 +165,16 @@ boolean = tokenPrim show updatePos getToken where
 	getToken (Token (Bool a) l c) = Just (Bool a)
 	getToken _ = Nothing
 
+cchar :: LexParser
+cchar = tokenPrim show update_pos getToken where
+	getToken (Token (Char s) l c) = Just (Char s)
+	getToken _ = Nothing
+
+sstring :: LexParser
+sstring = tokenPrim show update_pos getToken where
+	getToken (Token (String s) l c) = Just (String s)
+	getToken _ = Nothing
+
 identifier :: LexParser
 identifier = tokenPrim show updatePos getToken where
 	getToken (Token (Id s) l c) = Just (Id s)
@@ -171,8 +186,8 @@ identifier = tokenPrim show updatePos getToken where
 
 updatePos p (Token t l c) _ = newPos (sourceName p) l c
 
-simpleGetToken toktype (Token t l c) = 
-	if toktype == t then 
+simpleGetToken tok (Token t l c) = 
+	if tok == t then 
 		Just t
 	else 
 		Nothing

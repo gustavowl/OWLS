@@ -3,156 +3,146 @@ module Program where
 import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.Show.Functions
+import State
 import Lexer
 import Expr
-import Tokens
 
----------------------------------------------------------------------------------------------------
--- Program (subprograms, main)
----------------------------------------------------------------------------------------------------
-data Program = Program [Function] [Procedure] [Var] Function
-instance Show Program where
-	show(Program f p v m) = "Program { \n" ++
-		"Functions: " ++ show f ++ "\n" ++ 
-		"Procedures: " ++ show p ++ "\n" ++
-		"GlobalVar: " ++ show v ++ "\n" ++ 
-		"Main: " ++ show m ++ "\n}"
-
----------------------------------------------------------------------------------------------------
--- Function (parameters, return type, body)
----------------------------------------------------------------------------------------------------
-data Function = Function TokenType [Var] TokenType [Statement] 
-instance Show Function where
-	show(Function id p r b) = "Function { \n" ++ 
-		"\tName: " ++ show id ++ "\n" ++ 
-		"\tParam: " ++ show p ++ "\n" ++ 
-		"\tReturn Type: " ++ show r ++ "\n" ++ 
-		"\tBody: " ++ show b ++ "\n}"
-
----------------------------------------------------------------------------------------------------
--- Procedure (parameters, body)
----------------------------------------------------------------------------------------------------
-data Procedure = Procedure TokenType [Var] [Statement] 
-instance Show Procedure where
-	show(Procedure n p b) = "Procedure { \n" ++ 
-		"\tName: " ++ show id ++ "\n" ++ 
-		"\tParam: " ++ show p ++ "\n" ++ 
-		"\tBody: " ++ show b ++ "\n}"
-
----------------------------------------------------------------------------------------------------
--- Var (name, type)
----------------------------------------------------------------------------------------------------
-data Var = Var TokenType TokenType -- TODO
-instance Show Var where
-	show(Var n t) = "Var { \n" ++ 
-		"\tName: " ++ show n ++ "\n" ++ 
-		"\tType: " ++ show t ++ "\n}"
-
----------------------------------------------------------------------------------------------------
--- Statements - Condition / While / For / Attribuition / Comp_Attribuition
----------------------------------------------------------------------------------------------------
--- Statement (genelarization)
-data Statement =  
-	-- Condition (expression, block) 
-	Condition Expr [Statement]
-	-- Switch
-	| SwitchCase Expr [(Expr, [Statement])]
-	-- Attribuition (id, expression)
-	| Assignment TokenType Expr
---	| While BoolExpr [Statement]
---	| For BoolExpr [Statement]
---	| Attribuition Var Expr
---	| CAttr
-instance Show Statement where
-	show (Condition a b) = "If{" ++ show a ++ "," ++ show b ++ "}\n"
-	show (Assignment a b) = "Assign{" ++ show a ++ "," ++ show b ++ "}\n" 
-
----------------------------------------------------------------------------------------------------
--- Grammar
+-------------------------------------------------------------------------------------------------
+-- Main
 ---------------------------------------------------------------------------------------------------
 
 parseOWLS :: String -> Either ParseError Program
-parseOWLS input = runParser parseProgram (OWLState []) "" (getTokens input)
+parseOWLS input = runParser parseProgram (initState "" (getTokens input)
 
-parseProgram :: OWLParser Program
+-- Executes program
+parseProgram :: OWLParser Integer
 parseProgram = do
-	v <- parseGlobalVariables
-	f <- many parseFunction
-	p <- many parseProcedure
+	many parseDeclaration
 	m <- parseMain
-	return $ Program f p v m
+	return m
 
-parseMain :: OWLParser Function
+-- Executes main
+parseMain :: OWLParser (Maybe VarValue)
 parseMain = do
-	id <- mainToken
-	params <- parseParameters
-	body <- parseBlock
-	return $ Function id params (Id "char[]") body
+	mainToken
+	parseParameters
+	parseBlock >>= f where
+		f (Just (t, n)) = do 
+			if checkType t (AtomicType "int") then
+				return n
+			else
+				fail "Could not convert " ++ show t ++ " to int."
+		f _ = return 0
 
-parseFunction :: OWLParser Function
-parseFunction =  do
-	funcToken
-	id <- identifier
-	params <- parseParameters
-	ret <- parseReturnType
-	body <- parseBlock
-	return $ Function id params ret body 
+---------------------------------------------------------------------------------------------------
+-- Declarations
+---------------------------------------------------------------------------------------------------
 
-parseProcedure :: OWLParser Procedure
-parseProcedure = do
-	procToken
-	id <- identifier
-	params <- parseParameters
-	body <- parseBlock
-	return $ Procedure id params body 
-
-parseGlobalVariables :: OWLParser [Var]
-parseGlobalVariables = endBy (try parseVariable) semi
-
-parseParameters :: OWLParser [Var]
-parseParameters = parens (sepBy parseVariable comma)
-
-parseVariable :: OWLParser Var
-parseVariable = do
+parseVarDec :: OWLParser ()
+parseVarDec = do
 	name <- identifier
 	colon
-	t <- identifier
-	return $ Var name t
+	t <- parseVarType
+	semicolon
+	updateState (addVar (name, t))
 
-parseReturnType :: OWLParser TokenType
-parseReturnType = do
+parseFuncDec :: OWLParser ()
+parseFuncDec = do
+	funcToken
+	id <- identifier
+	params <- parens (sepBy parseParamDec comma)
+	colon
+	ret <- identifier
+	updateState (addFunc (id, params, ret))
+	try (parseFuncDef id) <|> semi
+
+parseFuncDef :: String -> OWLParser ()
+parseFuncDef id = do
+	body <- braces
+	updateState (updateFunc (id, body))
+
+parseProcDec :: OWLParser ()
+parseProcDec = do
+	procToken
+	id <- identifier
+	params <- parens (sepBy parseParamDec comma)
+	updateState (addProc (id, params))
+	body <- parseBlock
+	try (parseProcDef id) <|> semi
+
+parseProcDef :: String -> OWLParser ()
+parseProcDef id = do
+	body <- braces
+	updateState (updateProc (id, body))
+
+parseParamDec :: OWLParser VarDec
+parseParamDec = do
+	id <- identifier
 	colon
 	t <- identifier
-	return t
-
-parseBlock :: OWLParser [Statement]
-parseBlock = braces (many parseStatement)
+	return $ VarDec id t
 
 ---------------------------------------------------------------------------------------------------
--- Statements
+-- Statements execution
 ---------------------------------------------------------------------------------------------------
 
-parseStatement :: OWLParser Statement
-parseStatement = (try parseAssignment) 
-	<|> (try parseCondition) 
-	<|> (try parseSwitchCase) 
+parseBlock :: OWLInterpreter
+parseBlock = braces parseStatements
+
+parseStatements :: OWLInterpreter
+parseStatements = do
+	try do { parseStatement >>= f where
+			f (Just a) = do 
+				return $ Just a
+			f _ = return parseStatements }
+	<|> do return Nothing
+
+parseReturn :: OWLInterpreter
+parseReturn = do
+	returnToken
+	exp <- parseExpr
+	semi
+	return $ Just exp
+
+parseStatement :: OWLInterpreter
+parseStatement = (try parseDeclaration) 
+	<|> (try parseAssignment)
+	<|> (try parseReturn)
+	<|> (try parseCondition)
 	-- TODO: other statement types
 
-parseCondition :: OWLParser Statement
-parseCondition = do
-	ifToken
-	exp <- parseExpr
-	block <- parseBlock
-	return $ Condition exp block
+parseDeclaration :: OWLInterpreter
+parseDeclaration = do
+	(try parseVarDec) <|> (try parseFuncDec) <|> (try parseProcDec)
+	return Nothing
 
-parseAssignment :: OWLParser Statement
+parseAssignment :: OWLInterpreter
 parseAssignment = do
 	id <- identifier
 	assignToken
-	exp <- parseExpr
+	(expType, expValue) <- parseExpr
 	semi
-	return $ Assignment id exp
+	scope <- getVarScope id
+	varType <- getVarType (id, scope)
+	if checkType expType varType = True then
+		updateState (updateVar (id, exp))
+	else
+		fail "Could not convert " ++ show expType ++ " to " ++ show varType ++ "."
+	return Nothing
 
+parseCondition :: OWLInterpreter
+parseCondition = do
+	ifToken
+	(expType, expValue) <- parseExpr
+	if expType = (AtomicType "boolean") then
+		if expValue = True then 
+			return parseBlock
+		else
+			return Nothing
+	else
+		fail "Expression type is not boolean: " ++ show expType
+
+{-
 parseSwitchCase :: OWLParser Statement
 parseSwitchCase = do
 	switchToken
@@ -166,3 +156,4 @@ parseCase = do
 	expr <- parseExpr
 	block <- parseBlock
 	return $ (expr, block)
+-}

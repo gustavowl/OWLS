@@ -5,60 +5,37 @@ import Text.ParserCombinators.Parsec.Prim
 import Lexer
 import Tokens
 
+-- Expr type -> Var Type -> Final type or empty string if error
+checkType :: VarType -> VarType -> Boolean
+checkType (AtomicType "nat") (AtomicType "int") = True
+checkType (AtomicType "int") (AtomicType "real") = True 
+checkType (AtomicType "nat") (AtomicType "real") = True
+checkType a b = a == b
+
+
+parseID :: OWLParser TokenType
+parseID = do
+	-- pegar a variável do estado e retornar o valor dela num TokenType
+	return $ Nat 0
+
+parseFuncCall :: OWLParser TokenType
+parseFuncCall = do
+	id <- identifier
+	func <- -- pegar func equivalente ao ID
+	args <- parseArguments (funcArgs func)
+	-- executa a função e pegar o valor do retorno e retornar um TokenType
+	return $ Nat 0
+
+funcArgs :: Func -> [Var]
+funcArgs (Function id param ret body) = param
+
+parseArguments :: [Var] -> OWLParser TokenType
+parseArguments p = do
+
 ---------------------------------------------------------------------------------------------------
 -- Generic Expression
 ---------------------------------------------------------------------------------------------------
-data Expr = ExprToken TokenType | ExprFunc TokenType [Expr] |
-			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
 
-instance Show Expr where
-	show (ExprToken t) = show t
-	show (ExprFunc s e) = show s ++ show e
-	show (ExprUnOp op e) = "(" ++ show op ++ show e ++ ")"
-	show (ExprBinOp op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
-
----------------------------------------------------------------------------------------------------
--- Unary Operators
----------------------------------------------------------------------------------------------------
-data UnOp = Neg | Not
-instance Show UnOp where
-	show (Not) = "not"
-	show (Neg) = "-"
-
----------------------------------------------------------------------------------------------------
--- Binary Operators
----------------------------------------------------------------------------------------------------
-data BinOp = Add | Sub | Mul | Div | Mod | Conj | CConj | Disj | CDisj | Eq | Dif | Lt | Gt | Lte | Gte
-instance Show BinOp where
-	show (Add) = "+"
-	show (Sub) = "-"
-	show (Mul) = "*"
-	show (Div) = "/"
-	show (Mod) = "%"
-	show (Conj) = "and"
-	show (CConj) = "cand"
-	show (Disj) = "or"
-	show (CDisj) = "cor"
-	show (Eq) = "=="
-	show (Dif) = "!="
-	show (Lt) = "<"
-	show (Gt) = ">"
-	show (Lte) = "<="
-	show (Gte) = ">="
-
----------------------------------------------------------------------------------------------------
--- Grammar
----------------------------------------------------------------------------------------------------
-
-parseExpr :: OWLParser Expr
-parseExpr = parseOrChain
-
-parseExprLeaf :: OWLParser Expr
-parseExprLeaf = (try parseUnary)
-	<|> (try parseLiteral)
-	<|> (try parseFuncCall)
-	<|> (try parseID)
-	<|> (try (parens parseExpr))
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Leaf Terms
@@ -79,7 +56,7 @@ parseArguments :: OWLParser [Expr]
 parseArguments = parens (sepBy parseExpr comma)
 
 parseLiteral :: OWLParser Expr
-parseLiteral = parseNumber <|> parseBool
+parseLiteral = parseNumber <|> parseBool <|> parseChar <|> parseString
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Literal Leaf Terms
@@ -87,6 +64,11 @@ parseLiteral = parseNumber <|> parseBool
 
 parseNumber :: OWLParser Expr
 parseNumber = parseNatural <|> parseInteger <|> parseReal
+
+parseBool :: OWLParser Expr
+parseBool = do
+	n <- boolean
+	return $ ExprToken n
 
 parseNatural :: OWLParser Expr
 parseNatural = do
@@ -103,10 +85,15 @@ parseReal = do
 	n <- real
 	return $ ExprToken n
 
-parseBool :: OWLParser Expr
-parseBool = do
-	n <- boolean
-	return $ ExprToken n
+parseChar :: OWLParser Expr
+parseChar = do
+	id <- cchar
+	return $ ExprString id
+
+parseString :: OWLParser Expr
+parseString = do
+	id <- sstring
+	return $ ExprString id
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators

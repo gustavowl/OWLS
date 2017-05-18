@@ -1,5 +1,0 @@
-steps:
-alex tokens.x
-ghci
-:l tokens.hs
-lex "<code here>"

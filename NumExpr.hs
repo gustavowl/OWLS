@@ -6,136 +6,77 @@ import Lexer
 import Tokens
 
 ---------------------------------------------------------------------------------------------------
--- Generic Expression
----------------------------------------------------------------------------------------------------
-data Expr = ExprToken Token | ExprFunc Token [Expr] |
-			ExprUnOp UnOp Expr | ExprBinOp BinOp Expr Expr
-
-instance Show Expr where
-	show (ExprToken t) = show t
-	show (ExprFunc s e) = show s ++ show e
-	show (ExprUnOp op e) = "(" ++ show op ++ show e ++ ")"
-	show (ExprBinOp op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
-
----------------------------------------------------------------------------------------------------
--- Unary Operators
----------------------------------------------------------------------------------------------------
-data UnOp = Neg | Not
-instance Show UnOp where
-	show (Not) = "not"
-	show (Neg) = "-"
-
----------------------------------------------------------------------------------------------------
--- Binary Operators
----------------------------------------------------------------------------------------------------
-data BinOp = Add | Sub | Mul | Div | Mod | Conj | CConj | Disj | CDisj | Eq | Dif | Lt | Gt | Lte | Gte
-instance Show BinOp where
-	show (Add) = "+"
-	show (Sub) = "-"
-	show (Mul) = "*"
-	show (Div) = "/"
-	show (Mod) = "%"
-	show (Conj) = "and"
-	show (CConj) = "cand"
-	show (Disj) = "or"
-	show (CDisj) = "cor"
-	show (Eq) = "=="
-	show (Dif) = "!="
-	show (Lt) = "<"
-	show (Gt) = ">"
-	show (Lte) = "<="
-	show (Gte) = ">="
-
----------------------------------------------------------------------------------------------------
 -- Grammar
 ---------------------------------------------------------------------------------------------------
 
-parseExpr :: OWLParser Expr
-parseExpr = parseOrChain
+parseNumExpr :: OWLInterpreter
+parseNumExpr = parseOrChain
 
-parseExprLeaf :: OWLParser Expr
-parseExprLeaf = (try parseUnary)
-	<|> (try parseLiteral)
-	<|> (try parseFuncCall)
-	<|> (try parseID)
-	<|> (try (parens parseExpr))
+parseExprNumLeaf :: OWLInterpreter
+parseExprNumLeaf = (try parseNumUnary)
+	<|> (try parseNumber)
+	<|> (try (parens parseNumExpr))
+	<|> (try parseNumFuncCall)
+	<|> parseNumID
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseID :: OWLParser Expr
-parseID = do
+parseNumID :: OWLInterpreter
+parseNumID = do
 	id <- identifier
-	return $ ExprToken id
-
-parseFuncCall :: OWLParser Expr
-parseFuncCall = do
-	id <- identifier
-	args <- parseArguments
-	return $ ExprFunc id args
-
-parseArguments :: OWLParser [Expr]
-parseArguments = parens (sepBy parseExpr comma)
-
-parseLiteral :: OWLParser Expr
-parseLiteral = parseNumber <|> parseBool
+	k <- getVarKey id
+	((_, t), v) <- getVar k
+	if checkType t (NumberType "nat") then
+		return (NumberType "nat", v)
+	else if checkType t (AtomicType "int") then
+		return (NumberType "int", v)
+	else if checkType t (AtomicType "real") then
+		return (NumberType "real", v)
+	else
+		fail "Variable value " ++ id ++ " is not a number."
+	return v
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Literal Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseNumber :: OWLParser Expr
+parseNumber :: OWLInterpreter
 parseNumber = parseNatural <|> parseInteger <|> parseReal
 
-parseNatural :: OWLParser Expr
+parseNatural :: OWLInterpreter
 parseNatural = do
 	n <- natural
-	return $ ExprToken n
+	return (AtomicType "nat", NumberValue n)
 
-parseInteger :: OWLParser Expr
+parseInteger :: OWLInterpreter
 parseInteger = do
 	n <- integer
-	return $ ExprToken n
+	return (AtomicType "int", NumberValue n)
 
-parseReal :: OWLParser Expr
+parseReal :: OWLInterpreter
 parseReal = do
 	n <- real
-	return $ ExprToken n
-
-parseBool :: OWLParser Expr
-parseBool = do
-	n <- boolean
-	return $ ExprToken n
+	return (AtomicType "real", NumberValue n)
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseUnary :: OWLParser Expr
-parseUnary = parseMinus <|> parseNot
+parseNumUnary :: OWLInterpreter
+parseNumUnary = parseMinus
 
-parseMinus :: OWLParser Expr
+parseMinus :: OWLInterpreter
 parseMinus = do
-	op <- try parseMinusOp
-	e <- try parseExprLeaf
-	return $ ExprUnOp op e
-
-parseMinusOp :: OWLParser UnOp
-parseMinusOp = do
-	minusToken
-	return $ Neg
-
-parseNot :: OWLParser Expr
-parseNot = do
-	op <- try parseNotOp
-	e <- try parseExprLeaf
-	return $ ExprUnOp op e
-
-parseNotOp :: OWLParser UnOp
-parseNotOp = do
-	exclamationToken
-	return $ Not
+	op <- minusToken
+	parseExprNumLeaf >>= f where
+	f (t, NumberValue v) = do 
+		if t = (AtomicType "nat") then 
+			return (AtomicType "int", NumberValue -v)
+		else
+			return (t, NumberValue -v)
+	f _ = fail "WTF"
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Logic Binary Operators
