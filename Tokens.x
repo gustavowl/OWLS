@@ -149,8 +149,8 @@ data TokenSymbol =
   Break  |
   Bool Bool |
   Id String |
-  Nat Int |
-  Int Int |
+  Nat Double |
+  Int Double |
   Real Double |
   Char Char |
   String String 

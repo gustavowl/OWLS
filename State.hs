@@ -1,5 +1,11 @@
 module State where
 
+import Data.Functor.Identity
+import Text.ParserCombinators.Parsec
+import Text.Parsec.Prim
+import Text.Parsec.Combinator
+import Tokens
+
 ---------------------------------------------------------------------------------------------------
 -- State (global scope, local scope stack, user types)
 ---------------------------------------------------------------------------------------------------
@@ -19,7 +25,7 @@ type Function = (FuncDec, [Token])
 ---------------------------------------------------------------------------------------------------
 -- Procedure (parameters, body)
 ---------------------------------------------------------------------------------------------------
-type ProcDec = (String, [VarDec], [Statement]) 
+type ProcDec = (String, [VarDec]) 
 type Procedure = (ProcDec, [Token])
 
 ---------------------------------------------------------------------------------------------------
@@ -27,19 +33,20 @@ type Procedure = (ProcDec, [Token])
 ---------------------------------------------------------------------------------------------------
 -- A variable in the state table
 type VarDec = (String, VarType)
-type Var = (String, VarDec, Value)
+type Var = (String, VarType, VarValue)
 
 ---------------------------------------------------------------------------------------------------
 -- Types
 ---------------------------------------------------------------------------------------------------
 -- UserType (name, [fields])
-data UserType = (String, [(String, VarType)])
+type UserType = (String, [(String, VarType)])
 
 -- Description of variable type (atomic type, pointer of type, or array of type and given size)
 data VarType = AtomicType String 
 	| PointerType VarType 
 	| ArrayType Integer VarType 
 	| ProcType ProcDec | FuncType FuncDec
+	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------
 -- Values
@@ -50,52 +57,64 @@ data VarValue = NumberValue Double
 	| ArrayValue [VarValue]
 	| PointerValue Key
 	| CharValue Char
-	| BoolValue Boolean
+	| BoolValue Bool
 	| SubprogramValue [Token]
+	deriving (Eq,Show)
 
 -- Name + scope ID
 type Key = (String, Integer)
 
 ---------------------------------------------------------------------------------------------------
+-- Parser Types
+---------------------------------------------------------------------------------------------------
+type OWLParser = ParsecT [Token] OWLState Identity
+type OWLInterpreter = OWLParser (Maybe (VarType, VarValue))
+type OWLStatement = OWLParser (Maybe (Maybe (VarType, VarValue)))
+
+---------------------------------------------------------------------------------------------------
 -- Update State
 ---------------------------------------------------------------------------------------------------
 
-updateVar :: OWLState -> String -> VarValue -> OWLState
-updateVar state k v = state -- TODO
+updateVar :: Key -> VarValue -> OWLState -> OWLState
+updateVar k v state = state -- TODO
 
-updateFunc :: OWLState -> String -> [Token] -> OWLState
-updateFunc state k v = state -- TODO
+updateFunc :: Key -> [Token] -> OWLState -> OWLState
+updateFunc k v state = state -- TODO
 
-updateProc :: OWLState -> String -> [Token] -> OWLState
-updateProc state k v = state -- TODO
+updateProc :: Key -> [Token] -> OWLState -> OWLState
+updateProc k v state = state -- TODO
 
-addVar :: OWLState -> VarDec -> OWLState
-addVar state k v = state -- TODO
+addVar :: VarDec -> OWLState -> OWLState
+addVar dec state = state -- TODO
 
-addFunc :: OWLState -> FuncDec -> OWLState
-addFunc state k v = state -- TODO
+addFunc :: FuncDec -> OWLState -> OWLState
+addFunc dec state = state -- TODO
 
-addProc :: OWLState -> ProcDec -> OWLState
-addProc state k v = state -- TODO
+addProc :: ProcDec -> OWLState -> OWLState
+addProc dec state = state -- TODO
 
 ---------------------------------------------------------------------------------------------------
 -- Table access
 ---------------------------------------------------------------------------------------------------
 
 getVar :: OWLState -> Key -> Var
-getVar (id, scope) = ((id, AtomicType "int"), NumberValue 0) -- TODO: getFrom state
+getVar state (id, scope) = (id, AtomicType "int", NumberValue 0) -- TODO: get from state
 
 getVarType :: OWLState -> Key -> VarType
-getVarType state (id, scope) = do 
-	(_, t, v) <- getVar state (id, scoppe)
-	return t
+getVarType state key = let (s, t, v) = getVar state key in t
 
 getVarScope :: OWLState -> String -> Integer
-getVarScope id = 0 -- TODO
+getVarScope state id = 0 -- TODO
 
 ---------------------------------------------------------------------------------------------------
 -- Initial Values
 ---------------------------------------------------------------------------------------------------
+
+initState :: OWLState
+initState = (initScope, [], [])
+
+initScope :: OWLScope
+initScope = ([], [], [])
 
 getInitValue :: VarType -> VarValue
 getInitValue (AtomicType "nat") = NumberValue 0
@@ -105,5 +124,5 @@ getInitValue (AtomicType "char") = NumberValue 0
 getInitValue (AtomicType "bool") = BoolValue False
 getInitValue (AtomicType _) = UserValue [] -- TODO: initialize each field
 getInitValue (PointerType _) = PointerValue ("", 0)
-getInitValue (ArrayType _) = ArrayValue [] -- TODO: initialize each element
+getInitValue (ArrayType _ n) = ArrayValue [] -- TODO: initialize each element
 getInitValue (ProcType _) = SubprogramValue []
