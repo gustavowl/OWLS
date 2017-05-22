@@ -1,5 +1,6 @@
 module Expr where
 
+import Debug.Trace
 import State
 import NumExpr
 import BoolExpr

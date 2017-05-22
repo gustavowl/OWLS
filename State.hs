@@ -76,7 +76,7 @@ type OWLStatement = OWLParser (Maybe (Maybe (VarType, VarValue)))
 ---------------------------------------------------------------------------------------------------
 
 updateVar :: Key -> VarValue -> OWLState -> OWLState
-updateVar k v state = state -- TODO
+updateVar (id, scope) v state = state -- TODO
 
 updateFunc :: Key -> [Token] -> OWLState -> OWLState
 updateFunc k v state = state -- TODO
@@ -104,7 +104,10 @@ getVarType :: OWLState -> Key -> VarType
 getVarType state key = let (s, t, v) = getVar state key in t
 
 getVarScope :: OWLState -> String -> Integer
-getVarScope state id = 0 -- TODO
+getVarScope (global, locals, _) id = 0
+
+isInScope :: OWLScope -> String -> Bool
+isInScope scope id = False
 
 ---------------------------------------------------------------------------------------------------
 -- Initial Values

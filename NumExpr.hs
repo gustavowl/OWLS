@@ -1,5 +1,6 @@
 module NumExpr where
 
+import Data.Fixed
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Combinator
 import State
@@ -103,14 +104,14 @@ parseMinus :: OWLNumInterpreter
 parseMinus = do
 	op <- minusToken
 	n <- parseNumLeaf
-	return $ numNegate n
+	return $ numNeg n
 
-numNegate :: (VarType, Double) -> (VarType, Double)
-numNegate (AtomicType "nat", v) = (AtomicType "int", -v)
-numNegate (t, v) = (t, -v)
+numNeg :: (VarType, Double) -> (VarType, Double)
+numNeg (AtomicType "nat", v) = (AtomicType "int", -v)
+numNeg (t, v) = (t, -v)
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Numeric Binary Operators
+-- Gramar - Binary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseAddChain :: OWLNumInterpreter
@@ -154,11 +155,18 @@ parseMulChainTail = do
 		return $ numMod e1 e2
 
 numMul :: (VarType, Double) -> (VarType, Double) -> (VarType, Double)
-numMul _ _ = (AtomicType "real", 1.0) -- TODO
+numMul (AtomicType "real", v1) (_, v2) = (AtomicType "real", v1 * v2)
+numMul (_, v1) (AtomicType "real", v2) = (AtomicType "real", v1 * v2)
+numMul (AtomicType "int", v1) (_, v2) = (AtomicType "int", v1 * v2)
+numMul (_, v1) (AtomicType "int", v2) = (AtomicType "int", v1 * v2)
+numMul (_, v1) (_, v2) = (AtomicType "nat", v1 * v2)
 
 numDiv :: (VarType, Double) -> (VarType, Double) -> (VarType, Double)
-numDiv _ _ = (AtomicType "real", 1.0) -- TODO
+numDiv (_, v1) (_, v2) = (AtomicType "real", v1 / v2)
 
 numMod :: (VarType, Double) -> (VarType, Double) -> (VarType, Double)
-numMod _ _ = (AtomicType "real", 1.0) -- TODO
-
+numMod (AtomicType "real", v1) (_, v2) = (AtomicType "real", mod' v1 v2)
+numMod (_, v1) (AtomicType "real", v2) = (AtomicType "real", mod' v1 v2)
+numMod (AtomicType "int", v1) (_, v2) = (AtomicType "int", mod' v1 v2)
+numMod (_, v1) (AtomicType "int", v2) = (AtomicType "int", mod' v1 v2)
+numMod (_, v1) (_, v2) = (AtomicType "nat", mod' v1 v2)
