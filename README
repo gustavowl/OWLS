@@ -1,0 +1,9 @@
+commands:
+
+>> alex Tokens.x
+
+it generates a .hs file
+
+>> ghc main.hs
+
+>> ./main <file_name>.owls
