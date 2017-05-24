@@ -4,11 +4,6 @@ module Tokens where
 
 %wrapper "posn"
 
-$digit = 0-9      -- digits
-$alpha = [a-zA-Z]   -- alphabetic characters
-
-
-
 $whitechar = [ \t\n\r\f\v]
 $special   = [\(\)\,\;\[\]\`\{\}]
 $ascdigit  = 0-9
@@ -25,18 +20,6 @@ $octit     = 0-7
 $hexit     = [0-9 A-F a-f]
 $idchar    = [$alpha $digit \']
 $symchar   = [$symbol \:]
-$nl        = [\n\r]
-
-@reservedid = 
-  as|case|class|data|default|deriving|do|else|hiding|if|
-  import|in|infix|infixl|infixr|instance|let|module|newtype|
-  of|qualified|then|type|where
-@reservedop =
-  ".." | ":" | "::" | "=" | \\ | "|" | "<-" | "->" | "@" | "~" | "=>"
-@varid  = $small $idchar*
-@conid  = $large $idchar*
-@varsym = $symbol $symchar*
-@consym = \: $symchar*
 @decimal     = $digit+
 @octal       = $octit+
 @hexadecimal = $hexit+
