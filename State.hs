@@ -7,33 +7,28 @@ import Text.Parsec.Combinator
 import Tokens
 
 ---------------------------------------------------------------------------------------------------
--- State (global scope, local scope stack, user types)
+-- State (var table, func table, proc table, type table)
 ---------------------------------------------------------------------------------------------------
-type OWLState = (OWLScope, [OWLScope], [UserType])
-
----------------------------------------------------------------------------------------------------
--- Name table (functions IDs, procedure IDs, variable IDs)
----------------------------------------------------------------------------------------------------
-type OWLScope = ([Function], [Procedure], [Var])
+type OWLState = ([Var], [Function], [Procedure], [UserType])
 
 ---------------------------------------------------------------------------------------------------
 -- Function (parameters, return type, body)
 ---------------------------------------------------------------------------------------------------
-type FuncDec = (String, [VarDec], VarType) 
-type Function = (FuncDec, [Token])
+type FuncDec = (String, Integer, [VarDec], VarType) 
+type Function = (String, Integer, [VarDec], VarType, [Token])
 
 ---------------------------------------------------------------------------------------------------
 -- Procedure (parameters, body)
 ---------------------------------------------------------------------------------------------------
-type ProcDec = (String, [VarDec]) 
-type Procedure = (ProcDec, [Token])
+type ProcDec = (String, Integer, [VarDec]) 
+type Procedure = (String, Integer, [VarDec], [Token])
 
 ---------------------------------------------------------------------------------------------------
 -- Variables (name, type, value)
 ---------------------------------------------------------------------------------------------------
 -- A variable in the state table
-type VarDec = (String, VarType)
-type Var = (String, VarType, VarValue)
+type VarDec = (String, Integer, VarType)
+type Var = (String, Integer, VarType, VarValue)
 
 ---------------------------------------------------------------------------------------------------
 -- Types
@@ -45,7 +40,8 @@ type UserType = (String, [(String, VarType)])
 data VarType = AtomicType String 
 	| PointerType VarType 
 	| ArrayType Integer VarType 
-	| ProcType ProcDec | FuncType FuncDec
+	| FuncType FuncDec
+	| ProcType ProcDec 
 	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------
@@ -58,7 +54,8 @@ data VarValue = NumberValue Double
 	| PointerValue Key
 	| CharValue Char
 	| BoolValue Bool
-	| SubprogramValue [Token]
+	| FuncValue Key
+	| ProcValue Key
 	deriving (Eq,Show)
 
 -- Name + scope ID
@@ -76,48 +73,57 @@ type OWLStatement = OWLParser (Maybe (Maybe (VarType, VarValue)))
 ---------------------------------------------------------------------------------------------------
 
 updateVar :: Key -> VarValue -> OWLState -> OWLState
-updateVar (id, scope) v state = state -- TODO
+updateVar (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
 
 updateFunc :: Key -> [Token] -> OWLState -> OWLState
-updateFunc k v state = state -- TODO
+updateFunc (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
 
 updateProc :: Key -> [Token] -> OWLState -> OWLState
-updateProc k v state = state -- TODO
+updateProc (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
 
 addVar :: VarDec -> OWLState -> OWLState
-addVar dec state = state -- TODO
+addVar (name, scope, typ) (var, func, proc, types) = 
+	let newVar = (name, scope, typ, getInitValue typ) in
+	(newVar:var, func, proc, types)
 
 addFunc :: FuncDec -> OWLState -> OWLState
-addFunc dec state = state -- TODO
+addFunc (name, scope, params, ret) (var, func, proc, types) = 
+	let newFunc = (name, scope, params, ret, []) in
+	(var, newFunc:func, proc, types)
 
 addProc :: ProcDec -> OWLState -> OWLState
-addProc dec state = state -- TODO
+addProc (name, scope, params) (var, func, proc, types) = 
+	let newProc = (name, scope, params, []) in
+	(var, func, newProc:proc, types)
 
 ---------------------------------------------------------------------------------------------------
 -- Table access
 ---------------------------------------------------------------------------------------------------
 
 getVar :: OWLState -> Key -> Var
-getVar state (id, scope) = (id, AtomicType "int", NumberValue 0) -- TODO: get from state
+getVar state (name, scope) = (name, scope, AtomicType "int", NumberValue 0) -- TODO: get from state
 
 getVarType :: OWLState -> Key -> VarType
-getVarType state key = let (s, t, v) = getVar state key in t
+getVarType state key = let (_, _, t, _) = getVar state key in t
 
 getVarScope :: OWLState -> String -> Integer
-getVarScope (global, locals, _) id = 0
+getVarScope (var, func, proc, types) id = 0 -- TODO
 
-isInScope :: OWLScope -> String -> Bool
-isInScope scope id = False
+getFunc :: OWLState -> Key -> Function
+getFunc state (name, scope) = (name, scope, [], AtomicType "int", []) -- TODO: get from state
+
+getFuncRet :: OWLState -> Key -> VarType
+getFuncRet state key = let (_, _, _, t, _) = getFunc state key in t
+
+getFuncScope :: OWLState -> String -> Integer
+getFuncScope (var, func, proc, types) id = 0 -- TODO
 
 ---------------------------------------------------------------------------------------------------
 -- Initial Values
 ---------------------------------------------------------------------------------------------------
 
 initState :: OWLState
-initState = (initScope, [], [])
-
-initScope :: OWLScope
-initScope = ([], [], [])
+initState = ([], [], [], [])
 
 getInitValue :: VarType -> VarValue
 getInitValue (AtomicType "nat") = NumberValue 0
@@ -128,4 +134,5 @@ getInitValue (AtomicType "bool") = BoolValue False
 getInitValue (AtomicType _) = UserValue [] -- TODO: initialize each field
 getInitValue (PointerType _) = PointerValue ("", 0)
 getInitValue (ArrayType _ n) = ArrayValue [] -- TODO: initialize each element
-getInitValue (ProcType _) = SubprogramValue []
+getInitValue (FuncType _) = FuncValue ("", -1)
+getInitValue (ProcType _) = ProcValue ("", -1)

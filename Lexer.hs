@@ -104,8 +104,8 @@ modulusToken = tokenPrim show updatePos (simpleGetToken Modulus)
 assignToken :: TokenParser
 assignToken = tokenPrim show updatePos (simpleGetToken Assign)
 
-exclamationToken :: TokenParser
-exclamationToken = tokenPrim show updatePos (simpleGetToken Exclamation)
+notToken :: TokenParser
+notToken = tokenPrim show updatePos (simpleGetToken Exclamation)
 
 andToken :: TokenParser
 andToken = tokenPrim show updatePos (simpleGetToken And)

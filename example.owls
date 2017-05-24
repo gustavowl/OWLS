@@ -5,8 +5,5 @@ x : int;
 # proc ble (k : char) { }
 
 main() {
-	x = 10;
-	z = y;
-	n = x * 10 + y - z * -w;
 	return 10 + 50 * 2 - 5;
 }

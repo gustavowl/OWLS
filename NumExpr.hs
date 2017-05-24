@@ -5,6 +5,7 @@ import Text.ParserCombinators.Parsec
 import Text.Parsec.Combinator
 import State
 import Lexer
+import FuncCall
 import qualified Tokens
 
 type OWLNumInterpreter = OWLParser (VarType, Double)
@@ -22,12 +23,6 @@ isNumber _ = False
 getNumber :: VarValue -> Double
 getNumber (NumberValue n) = n
 getNumber _ = 0
-
-checkType :: VarType -> VarType -> Bool
-checkType (AtomicType "nat") (AtomicType "int") = True
-checkType (AtomicType "int") (AtomicType "real") = True 
-checkType (AtomicType "nat") (AtomicType "real") = True
-checkType a b = (isNumber a) && (a == b)
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar
@@ -50,26 +45,24 @@ parseNumLeaf = (try parseNumUnary)
 parseNumID :: OWLNumInterpreter
 parseNumID = do
 	state <- getState
-	id <- identifier
-	let s = getVarScope state id
-	let (_, t, v) = getVar state (id, s)
-	let n = getNumber v
-	if checkType t (AtomicType "nat") then
-		return (AtomicType "nat", n)
-	else if checkType t (AtomicType "int") then
-		return (AtomicType "int", n)
-	else if checkType t (AtomicType "real") then
-		return (AtomicType "real", n)
+	name <- identifier
+	let scope = getVarScope state name
+	let (_, _, t, v) = getVar state (name, scope)
+	if (checkType t (AtomicType "real")) && (isNumber t) then do
+		let n = getNumber v
+		if checkType t (AtomicType "nat") then
+			return (AtomicType "nat", n)
+		else if checkType t (AtomicType "int") then
+			return (AtomicType "int", n)
+		else
+			return (AtomicType "real", n)
 	else
-		fail $ "Variable value " ++ id ++ " is not a number."
+		fail $ "Variable value " ++ name ++ " is not a number."
 
 parseNumFuncCall :: OWLNumInterpreter
 parseNumFuncCall = do
-	state <- getState
-	id <- identifier
-	let s = getVarScope state id
-	let t = getVarType state (id, s)
-	return (AtomicType "int", 0) -- TODO
+	(t, v) <- parseFuncCall $ AtomicType "real"
+	return (t, getNumber v)
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Literal Leaf Terms

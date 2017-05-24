@@ -9,6 +9,7 @@ import Tokens
 import Expr
 import NumExpr
 import BoolExpr
+import FuncCall
 
 -------------------------------------------------------------------------------------------------
 -- Main
@@ -47,7 +48,7 @@ parseVarDec = do
 	colon
 	t <- parseVarType
 	semi
-	updateState (addVar (name, t))
+	updateState (addVar (name, 0, t))
 	return Nothing
 {-
 parseFuncDec :: OWLInterpreter
@@ -88,10 +89,10 @@ parseParamList = parens (sepBy parseParamDec comma)
 
 parseParamDec :: OWLParser VarDec
 parseParamDec = do
-	id <- identifier
+	name <- identifier
 	colon
 	t <- parseVarType
-	return (id, t)
+	return (name, 0, t)
 
 parseVarType :: OWLParser VarType
 parseVarType = do
