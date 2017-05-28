@@ -26,8 +26,10 @@ type Procedure = (String, Integer, [VarDec], [Token])
 ---------------------------------------------------------------------------------------------------
 -- Variables (name, type, value)
 ---------------------------------------------------------------------------------------------------
+type UpdatedVar = (Var, Bool)
 -- A variable in the state table
 type VarDec = (String, Integer, VarType)
+-- String id, Integer scope, VarType type, VarValue
 type Var = (String, Integer, VarType, VarValue)
 
 ---------------------------------------------------------------------------------------------------
@@ -72,8 +74,21 @@ type OWLStatement = OWLParser (Maybe (Maybe (VarType, VarValue)))
 -- Update State
 ---------------------------------------------------------------------------------------------------
 
+upVar :: Var -> String -> Integer -> VarValue -> UpdatedVar
+upVar (vName, vScope, vType, vValue) name scope newValue = 
+	if vName == name && vScope == scope then
+		((vName, vScope, vType, newValue), True)
+	else 
+		((vName, vScope, vType, vValue), False)
+
+recVar :: [Var] -> String -> Integer -> VarValue -> Bool -> [Var]
+recVar [] name scope v up = if up then [] else fail "Error"
+recVar (hVar:tailVar) name scope v up = 
+	let (var, u) = upVar hVar name scope v in var : recVar tailVar name scope v (up || u)
+
 updateVar :: Key -> VarValue -> OWLState -> OWLState
-updateVar (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
+updateVar (name, scope) v (var, func, proc, types) = 
+	let newVar = recVar var name scope v False in (newVar, func, proc, types)
 
 updateFunc :: Key -> [Token] -> OWLState -> OWLState
 updateFunc (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
