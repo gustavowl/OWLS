@@ -7,28 +7,16 @@ import Lexer
 import NumExpr
 import qualified Tokens
 
-type OWLBoolInterpreter = OWLParser Bool
-
----------------------------------------------------------------------------------------------------
--- Variable types and values
----------------------------------------------------------------------------------------------------
-
-isBoolean :: VarType -> Bool
-isBoolean (AtomicType "bool") = True
-isBoolean _ = False
-
-getBoolean :: VarValue -> Bool
-getBoolean (BoolValue v) = v
-getBoolean _ = False
-
 ---------------------------------------------------------------------------------------------------
 -- Grammar
 ---------------------------------------------------------------------------------------------------
 
-parseBoolExpr :: OWLBoolInterpreter
-parseBoolExpr = parseOrChain
+parseBoolExpr :: OWLParser Expr
+parseBoolExpr = 
+	expr <- parseOrChain
+	return $ BoolNode expr
 
-parseBoolLeaf :: OWLBoolInterpreter
+parseBoolLeaf :: OWLParser BoolNode
 parseBoolLeaf = (try parseBoolUnary)
 	<|> (try boolean)
 	<|> (try (parens parseBoolExpr))
@@ -39,84 +27,86 @@ parseBoolLeaf = (try parseBoolUnary)
 -- Grammar - Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseBoolID :: OWLBoolInterpreter
+parseBoolID :: OWLParser BoolNode
 parseBoolID = do
-	state <- getState
-	id <- identifier
-	let s = getVarScope state id
-	let (_, _, t, v) = getVar state (id, s)
-	if t == (AtomicType "bool") then
-		return $ getBoolean v
-	else
-		fail $ "Variable value " ++ id ++ " is not boolean."
+	name <- identifier
+	retun $ BoolID name
 
-parseBoolFuncCall :: OWLBoolInterpreter
-parseBoolFuncCall = parseBoolID -- TODO
+parseBoolFuncCall :: OWLParser BoolNode
+parseBoolFuncCall = do
+	(name, params) <- parseFuncCall
+	return $ BoolFuncCall name params
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseBoolUnary :: OWLBoolInterpreter
+parseBoolUnary :: OWLParser BoolNode
 parseBoolUnary = parseNeg
 
-parseNeg :: OWLBoolInterpreter
+parseNeg :: OWLParser BoolNode
 parseNeg = do
-	op <- notToken
+	notToken
 	n <- parseBoolLeaf
-	return $ not n
+	return $ BoolNot n
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseOrChain :: OWLBoolInterpreter
+parseOrChain :: OWLParser BoolNode
 parseOrChain = (try parseOrChainTail) <|> (try parseAndChain)
 
-parseOrChainTail :: OWLBoolInterpreter
+parseOrChainTail :: OWLParser BoolNode
 parseOrChainTail = do
 	e1 <- parseAndChain
-	op <- orToken -- TODO: corToken
+	op <- orToken <|> corToken
 	e2 <- parseOrChain
-	return $ e1 || e2
+	if op == Tokens.Or then
+		return $ BinOr e1 e1
+	else
+		return $ BinOrC e1 e2
 
-parseAndChain :: OWLBoolInterpreter
+parseAndChain :: OWLParser BoolNode
 parseAndChain = (try parseAndChainTail) <|> (try parseEqChain)
 
-parseAndChainTail :: OWLBoolInterpreter
+parseAndChainTail :: OWLParser BoolNode
 parseAndChainTail = do
 	e1 <- parseEqChain
-	op <- andToken -- TODO: candToken
+	op <- andToken <|> candToken
 	e2 <- parseAndChain
-	return $ e1 && e2
+	if op == Tokens.And then
+		return $ BinAnd e1 e1
+	else
+		return $ BinAndC e1 e2
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Relational Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseEqChain :: OWLBoolInterpreter
+parseEqChain :: OWLParser BoolNode
 parseEqChain = (try parseEqChainTail) <|> (try parseRelational) <|> (try parseBoolLeaf)
 
-parseEqChainTail :: OWLBoolInterpreter
+parseEqChainTail :: OWLParser BoolNode
 parseEqChainTail = do
 	e1 <- parseRelational
 	op <- eqToken <|> difToken
 	e2 <- parseEqChain
 	if op == Tokens.Equals then
-		return $ e1 == e2
+		return $ BoolEq e1 e2
 	else
-		return $ not (e1 == e2)
+		return $ BoolDif e1 e2
 
-parseRelational :: OWLBoolInterpreter
+parseRelational :: OWLParser BoolNode
 parseRelational = do
-	(t1, v1) <- parseNumExpr
+	e1 <- parseExpr
 	op <- greaterToken <|> greaterEqToken <|> lessToken <|> lessEqToken
-	(t2, v2) <- parseNumExpr
+	e2 <- parseExpr
 	if op == Tokens.Greater then
-		return $ v1 > v2
+		return $ BoolGt e1 e2
 	else if op == Tokens.Less then
-		return $ v1 < v2
+		return $ BoolLt e1 e2
 	else if op == Tokens.GreaterEq then
-		return $ v1 >= v2
+		return $ BoolGtEq e1 e2
 	else
-		return $ v1 <= v2
+		return $ BoolLtEq e1 e2

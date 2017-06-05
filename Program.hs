@@ -1,90 +1,67 @@
 module Program where
 
-import Control.Monad
-import Text.ParserCombinators.Parsec
-import Text.Show.Functions
-import State
-import Lexer
-import Tokens
+import ProgramTree
 import Expr
-import NumExpr
-import BoolExpr
-import FuncCall
 
--------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 -- Main
 ---------------------------------------------------------------------------------------------------
 
-parseOWLS :: String -> Either ParseError Double
-parseOWLS input = runParser parseProgram initState "" (alexScanTokens input)
+parseOWLS :: String -> Either ParseError Program
+parseOWLS input = runParser parseProgram () "" (alexScanTokens input)
 
--- Executes program
-parseProgram :: OWLParser Double
+parseProgram :: OWLParser Program
 parseProgram = do
-	many parseDeclaration
-	m <- parseMain
-	return m
-
--- Executes main
-parseMain :: OWLParser Double
-parseMain = do
-	mainToken
-	params <- parseParamList
-	parseBlock (AtomicType "int") >>= f where
-		f (Just (t, n)) =
-			if checkType t (AtomicType "int") then
-				return $ getNumber n
-			else
-				fail $ "Could not convert " ++ show t ++ " to int."
-		f _ = return 0
+	dec <- many parseDeclaration
+	main <- parseMain
+	return $ Program dec main
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
 ---------------------------------------------------------------------------------------------------
 
-parseVarDec :: OWLInterpreter
+parseDeclaration :: OWLParser Declaration
+parseDeclaration = (try parseVarDec) <|> (try parseFuncDec) <|> parseProcDec
+
+parseMain :: OWLParser 
+parseMain = do
+	mainToken
+	params <- parseParamList
+	body <- parseBlock <|> parseEmptyBlock
+	return $ Function name params (AtomicType "int") body
+
+parseVarDec :: OWLParser Declaration
 parseVarDec = do
 	name <- identifier
 	colon
 	t <- parseVarType
 	semi
-	updateState (addVar (name, 0, t))
-	return Nothing
-{-
-parseFuncDec :: OWLInterpreter
-parseFuncDec = do
+	return $ Var name t
+
+parseFuncDec :: Bool -> OWLInterpreter
+parseFuncDec update = do
 	funcToken
-	id <- identifier
+	name <- identifier
 	params <- parseParamList
 	colon
-	ret <- identifier
-	updateState (addFunc (id, params, ret))
-	try (parseFuncDef id) <|> semi
-	return Nothing
+	ret <- parseVarType
+	body <- parseBlock <|> parseEmptyBlock
+	return $ Function name params ret body
 
-parseFuncDef :: String -> OWLInterpreter
-parseFuncDef id = do
-	body <- braces
-	updateState (updateFunc (id, body))
-	return Nothing
+parseEmptyBlock :: OWLParser [Statement]
+parseEmptyBlock = do
+	semi
+	return []
 
 parseProcDec :: OWLInterpreter
 parseProcDec = do
 	procToken
-	id <- identifier
+	name <- identifier
 	params <- parseParamList
-	updateState (addProc (id, params))
-	body <- parseBlock
-	try (parseProcDef id) <|> semi
-	return Nothing
+	body <- parseBlock <|> parseEmptyBlock
+	return $ Procedure name params body
 
-parseProcDef :: String -> OWLInterpreter
-parseProcDef id = do
-	body <- braces 
-	updateState $ updateProc (id, body)
-	return Nothing
--}
-parseParamList :: OWLParser [VarDec]
+parseParamList :: OWLParser [Declaration]
 parseParamList = parens (sepBy parseParamDec comma)
 
 parseParamDec :: OWLParser VarDec
@@ -92,83 +69,59 @@ parseParamDec = do
 	name <- identifier
 	colon
 	t <- parseVarType
-	return (name, 0, t)
+	return $ Var name t
 
 parseVarType :: OWLParser VarType
 parseVarType = do
 	id <- identifier
-	return $ AtomicType id -- TODO
+	-- TODO: verificar se o tipo existe 
+	-- TODO: parar de ignorar os outros tipos
+	return $ AtomicType id 
 
 ---------------------------------------------------------------------------------------------------
--- Statements execution
+-- Statements
 ---------------------------------------------------------------------------------------------------
 
-parseBlock :: VarType -> OWLInterpreter
-parseBlock t = braces $ parseStatements t
+-- VarType : tipo esperado de retorno 
+parseBlock :: OWLParser [Statement]
+parseBlock = braces $ many parseStatement
 
-parseStatements :: VarType -> OWLInterpreter
-parseStatements t = do
-	(optionMaybe $ parseStatement t) >>= stmt where
-		stmt (Just (Just a)) = return $ Just a
-		stmt (Just Nothing) = do
-			s <- parseStatements t
-			return s
-		stmt _ = return Nothing
-
-parseStatement :: VarType -> OWLInterpreter
-parseStatement t = (try $ parseReturn t)
+parseStatement :: OWLParser Statement
+parseStatement = (try parseReturn)
 	<|> (try parseDeclaration) 
 	<|> (try parseAssignment)
-	<|> (try $ parseCondition t)
+	<|> (try parseCondition)
 	-- TODO: other statement types
 
-parseReturn :: VarType -> OWLInterpreter
-parseReturn t = do
+parseReturn :: OWLParser Statement
+parseReturn = do
 	returnToken
-	value <- parseExpr t
+	expr <- parseExpr
 	semi
-	return $ Just (t, value)
+	return $ Return expr
 
-parseDeclaration :: OWLInterpreter
-parseDeclaration = do 
-	(try parseVarDec) 
-	return Nothing
-	-- <|> (try parseFuncDec) 
-	-- <|> (try parseProcDec)
-
-parseAssignment :: OWLInterpreter
+parseAssignment :: OWLParser Statement
 parseAssignment = do
-	state <- getState
-	id <- identifier
+	name <- identifier
 	assignToken
-	let scope = getVarScope state id
-	let t = getVarType state (id, scope)
-	value <- parseExpr t
+	expr <- parseExpr
 	semi
-	updateState $ updateVar (id, scope) value
+	return $ Assignment name expr
+
+parseCondition :: OWLParser Statement
+parseCondition = do
+	ifToken
+	expr <- parseBoolExpr
+	body <- parseBlock
+	elseBody <- (try parseElse) <|> parseEmptyElse
 	return Nothing
 
-parseCondition :: VarType -> OWLInterpreter
-parseCondition t = do
-	ifToken
-	value <- parseBoolExpr
-	if value then 
-		parseBlock t >>= return
-	else
-		return Nothing
+parseElse :: OWLParser [Statement]
+parseElse = do
+	elsetoken
+	body <- parseBlock
+	return body
 
-{-
-parseSwitchCase :: OWLParser Statement
-parseSwitchCase = do
-	switchToken
-	expr <- parseExpr
-	cases <- many parseCase
-	return $ SwitchCase expr cases
-
-parseCase :: OWLParser (Expr, [Statement])
-parseCase = do
-	caseToken
-	expr <- parseExpr
-	block <- parseBlock
-	return $ (expr, block)
--}
+parseEmptyElse :: OWLParser [Statement]
+parseEmptyElse = do
+	return []

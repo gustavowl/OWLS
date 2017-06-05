@@ -1,9 +1,13 @@
 x : int;
 
-# func bla (a : int, b : int) : int {}
+func bla (a : int, b : int) : int {}
+
+# func bla (a : func(b : int)[int], b : int)
 
 # proc ble (k : char) { }
 
 main() {
+	x : int;
+	x = 10;
 	return 10 + 50 * 2 - 5;
 }

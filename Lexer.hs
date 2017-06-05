@@ -3,13 +3,13 @@ module Lexer where
 import Data.Functor.Identity
 import Text.Parsec.Prim
 import Text.ParserCombinators.Parsec.Pos
+import qualified ProgramTree as P 
 import Tokens
-import State
 
-type TokenParser = OWLParser TokenSymbol
-type IDParser = OWLParser String
-type NumParser = OWLParser Double
-type BoolParser = OWLParser Bool
+type TokenParser = P.OWLParser TokenSymbol
+type IDParser = P.OWLParser String
+type NumParser = P.OWLParser Double
+type BoolParser = P.OWLParser Bool
 
 ---------------------------------------------------------------------------------------------------
 -- Program key words
@@ -62,7 +62,7 @@ lparen = tokenPrim show updatePos (simpleGetToken LParen)
 rparen :: TokenParser
 rparen = tokenPrim show updatePos (simpleGetToken RParen)
 
-parens :: OWLParser a -> OWLParser a
+parens :: P.OWLParser a -> P.OWLParser a
 parens p = do
 	lparen
 	s <- p
@@ -75,7 +75,7 @@ lbrace = tokenPrim show updatePos (simpleGetToken LBrace)
 rbrace :: TokenParser
 rbrace = tokenPrim show updatePos (simpleGetToken RBrace)
 
-braces :: OWLParser a -> OWLParser a
+braces :: P.OWLParser a -> P.OWLParser a
 braces p = do
 	lbrace
 	s <- p

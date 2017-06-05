@@ -14,6 +14,7 @@ type OWLState = ([Var], [Function], [Procedure], [UserType])
 ---------------------------------------------------------------------------------------------------
 -- Function (parameters, return type, body)
 ---------------------------------------------------------------------------------------------------
+type UpdatedFunc = (Function, Bool)
 type FuncDec = (String, Integer, [VarDec], VarType) 
 type Function = (String, Integer, [VarDec], VarType, [Token])
 
@@ -77,7 +78,7 @@ type OWLStatement = OWLParser (Maybe (Maybe (VarType, VarValue)))
 upVar :: Var -> String -> Integer -> VarValue -> UpdatedVar
 upVar (vName, vScope, vType, vValue) name scope newValue = 
 	if vName == name && vScope == scope then
-		((vName, vScope, vType, newValue), True)
+		((vName, vScope, vType, newValue), True) -- TODO: verify types
 	else 
 		((vName, vScope, vType, vValue), False)
 
@@ -89,10 +90,23 @@ recVar (hVar:tailVar) name scope v up =
 updateVar :: Key -> VarValue -> OWLState -> OWLState
 updateVar (name, scope) v (var, func, proc, types) = 
 	let newVar = recVar var name scope v False in (newVar, func, proc, types)
+---------------------------------------------------------------------------------------------------
+upFunc :: Function -> String -> Integer -> [Token] -> UpdatedFunc
+upFunc (fName, fScope, fParams, fRet, fTokens) name scope newTokens = 
+	if fName == name && fScope == scope then
+		((fName, fScope, fParams, fRet, newTokens), True) -- TODO: verify types
+	else 
+		((fName, fScope, fParams, fRet, fTokens), False)
+
+recFunc :: [Function] -> String -> Integer -> [Token] -> Bool -> [Function]
+recFunc [] name scope tokens up = if up then [] else fail "Error"
+recFunc (hFunc:tailFunc) name scope tokens up = 
+	let (func, u) = upFunc hFunc name scope tokens in func : recFunc tailFunc name scope tokens (up || u)
 
 updateFunc :: Key -> [Token] -> OWLState -> OWLState
-updateFunc (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
-
+updateFunc (name, scope) tokens (var, func, proc, types) = 
+	let newFunc = recFunc func name scope tokens False in (var, newFunc, proc, types)
+---------------------------------------------------------------------------------------------------
 updateProc :: Key -> [Token] -> OWLState -> OWLState
 updateProc (name, scope) v (var, func, proc, types) = (var, func, proc, types) -- TODO
 
