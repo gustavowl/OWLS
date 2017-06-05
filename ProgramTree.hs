@@ -11,9 +11,10 @@ import Tokens
 -- (Lista de declarações de variáveis/funções/procedimentos, main)
 type Program = ([Declaration], Declaration)
 
-data Declaration = Var String VarType 
+data Declaration = Var String VarType (Maybe Expr)
 	| Function String [Declaration] VarType [Statement]
 	| Procedure String [Declaration] [Statement]
+	deriving (Eq,Show)
 
 data Statement = VarDec Declaration
 	| FuncDec Declaration
@@ -21,9 +22,13 @@ data Statement = VarDec Declaration
 	| Assignment String Expr
 	| If Expr [Statement] [Statement]
 	| Return Expr
+	deriving (Eq,Show)
 	-- TODO: mais coisa
 
-data Expr = BoolExpr BoolNode | NumExpr NumNode | StuffExpr StuffNode
+data Expr = BoolExpr BoolNode 
+	| NumExpr NumNode 
+	| StuffExpr StuffNode
+	deriving (Eq,Show)
 
 data BoolNode = BoolLit Bool
 	| BoolID String 
@@ -39,6 +44,7 @@ data BoolNode = BoolLit Bool
 	| BoolGtEq Expr Expr
 	| BoolLt Expr Expr
 	| BoolLtEq Expr Expr
+	deriving (Eq,Show)
 
 data NumNode = NumNat Double
 	| NumInt Double
@@ -51,15 +57,20 @@ data NumNode = NumNat Double
 	| NumMul NumNode NumNode
 	| NumDiv NumNode NumNode
 	| NumMod NumNode NumNode
+	deriving (Eq,Show)
 
 -- TODO: CharNode
 
 data StuffNode = StuffID String
 	| StuffFuncCall String [Expr]
+	deriving (Eq,Show)
 
 data VarType = AtomicType String 
 	| ArrayType VarType
 	| PointerType VarType
+	| FuncType [Declaration] VarType
+	| ProcType [Declaration]
+	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------
 -- Parser Types

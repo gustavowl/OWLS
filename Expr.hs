@@ -177,11 +177,11 @@ parseOrChainTail = do
 		return $ BoolOrC e1 e2
 
 parseAndChain :: OWLParser BoolNode
-parseAndChain = (try parseAndChainTail) <|> (try parseEqChain)
+parseAndChain = (try parseAndChainTail) <|> (try parseRelational)
 
 parseAndChainTail :: OWLParser BoolNode
 parseAndChainTail = do
-	e1 <- parseEqChain
+	e1 <- parseRelational
 	op <- andToken <|> candToken
 	e2 <- parseAndChain
 	if op == Tokens.And then
@@ -193,32 +193,26 @@ parseAndChainTail = do
 -- Gramar - Relational Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseEqChain :: OWLParser BoolNode
-parseEqChain = (try parseEqChainTail) <|> (try parseRelational) <|> (try parseBoolLeaf)
+parseRelational :: OWLParser BoolNode
+parseRelational = (try parseRelationalTail) <|> parseBoolLeaf
 
-parseEqChainTail :: OWLParser BoolNode
-parseEqChainTail = do
-	e1 <- parseRelational
-	op <- eqToken <|> difToken
-	e2 <- parseEqChain
+parseRelationalTail :: OWLParser BoolNode
+parseRelationalTail = do
+	e1 <- parseExpr
+	op <- greaterToken <|> greaterEqToken <|> lessToken <|> lessEqToken <|> eqToken <|> difToken
+	e2 <- parseExpr
 	if op == Tokens.Equals then
 		return $ BoolEq e1 e2
-	else
+	else if op == Tokens.Not_Equals then
 		return $ BoolDif e1 e2
-
-parseRelational :: OWLParser Expr
-parseRelational = do
-	e1 <- parseExpr
-	op <- greaterToken <|> greaterEqToken <|> lessToken <|> lessEqToken
-	e2 <- parseExpr
-	if op == Tokens.Greater then
-		return $ Expr $ BoolGt e1 e2
+	else if op == Tokens.Greater then
+		return $ BoolGt e1 e2
 	else if op == Tokens.Less then
-		return $ Expr $ BoolLt e1 e2
+		return $ BoolLt e1 e2
 	else if op == Tokens.GreaterEq then
-		return $ Expr $ BoolGtEq e1 e2
+		return $ BoolGtEq e1 e2
 	else
-		return $ Expr $ BoolLtEq e1 e2
+		return $ BoolLtEq e1 e2
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Stuff

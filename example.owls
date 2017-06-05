@@ -1,8 +1,16 @@
-x : int;
+x : int = 10;
 
-func bla (a : int, b : int) : int {}
+func bla1 (a : int, b : int) : int {}
 
-# func bla (a : func(b : int)[int], b : int)
+# const y : int = 10;
+
+# bla2 : int[7] = {1, 2, 3, 4, 5, 6, 7};
+
+# bla3 : @int;
+
+# struct blah { x : int; }
+
+# func blo (a : func(b : int)[int], b : int)
 
 # proc ble (k : char) { }
 

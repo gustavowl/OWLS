@@ -1,20 +1,26 @@
 module Program where
 
+import Text.ParserCombinators.Parsec
+import Text.Parsec.Combinator
+import Data.Functor.Identity
+import Control.Monad
 import ProgramTree
 import Expr
+import Lexer
+import qualified Tokens as T
 
 ---------------------------------------------------------------------------------------------------
 -- Main
 ---------------------------------------------------------------------------------------------------
 
 parseOWLS :: String -> Either ParseError Program
-parseOWLS input = runParser parseProgram () "" (alexScanTokens input)
+parseOWLS input = runParser parseProgram () "" (T.getTokens input)
 
 parseProgram :: OWLParser Program
 parseProgram = do
 	dec <- many parseDeclaration
 	main <- parseMain
-	return $ Program dec main
+	return (dec, main)
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
@@ -23,12 +29,12 @@ parseProgram = do
 parseDeclaration :: OWLParser Declaration
 parseDeclaration = (try parseVarDec) <|> (try parseFuncDec) <|> parseProcDec
 
-parseMain :: OWLParser 
+parseMain :: OWLParser Declaration
 parseMain = do
 	mainToken
 	params <- parseParamList
 	body <- parseBlock <|> parseEmptyBlock
-	return $ Function name params (AtomicType "int") body
+	return $ Function "main" params (AtomicType "int") body
 
 parseVarDec :: OWLParser Declaration
 parseVarDec = do
@@ -38,8 +44,8 @@ parseVarDec = do
 	semi
 	return $ Var name t
 
-parseFuncDec :: Bool -> OWLInterpreter
-parseFuncDec update = do
+parseFuncDec :: OWLParser Declaration
+parseFuncDec = do
 	funcToken
 	name <- identifier
 	params <- parseParamList
@@ -53,7 +59,7 @@ parseEmptyBlock = do
 	semi
 	return []
 
-parseProcDec :: OWLInterpreter
+parseProcDec :: OWLParser Declaration
 parseProcDec = do
 	procToken
 	name <- identifier
@@ -64,7 +70,7 @@ parseProcDec = do
 parseParamList :: OWLParser [Declaration]
 parseParamList = parens (sepBy parseParamDec comma)
 
-parseParamDec :: OWLParser VarDec
+parseParamDec :: OWLParser Declaration
 parseParamDec = do
 	name <- identifier
 	colon
@@ -88,10 +94,17 @@ parseBlock = braces $ many parseStatement
 
 parseStatement :: OWLParser Statement
 parseStatement = (try parseReturn)
-	<|> (try parseDeclaration) 
+	<|> (try parseDecStatement) 
 	<|> (try parseAssignment)
 	<|> (try parseCondition)
 	-- TODO: other statement types
+
+parseDecStatement :: OWLParser Statement
+parseDecStatement = do
+	parseDeclaration >>= f where
+		f (Var n t) = return $ VarDec (Var n t)
+		f (Function n p r b) = return $ FuncDec (Function n p r b)
+		f (Procedure n p b) = return $ ProcDec (Procedure n p b)
 
 parseReturn :: OWLParser Statement
 parseReturn = do
@@ -114,11 +127,11 @@ parseCondition = do
 	expr <- parseBoolExpr
 	body <- parseBlock
 	elseBody <- (try parseElse) <|> parseEmptyElse
-	return Nothing
+	return $ If expr body elseBody
 
 parseElse :: OWLParser [Statement]
 parseElse = do
-	elsetoken
+	elseToken
 	body <- parseBlock
 	return body
 

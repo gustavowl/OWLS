@@ -82,6 +82,20 @@ braces p = do
 	rbrace
 	return $ s
 
+lbracket :: TokenParser
+lbracket = tokenPrim show updatePos (simpleGetToken LBracket)
+
+rbracket :: TokenParser
+rbracket = tokenPrim show updatePos (simpleGetToken RBracket)
+
+brackets :: P.OWLParser a -> P.OWLParser a
+brackets p = do
+	lbracket
+	s <- p
+	rbracket
+	return $ s
+
+
 ---------------------------------------------------------------------------------------------------
 -- Operators
 ---------------------------------------------------------------------------------------------------

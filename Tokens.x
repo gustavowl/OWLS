@@ -48,6 +48,8 @@ tokens :-
   ")"                                  { \p s -> newToken p RParen }
   "{"                                  { \p s -> newToken p LBrace }
   "}"                                  { \p s -> newToken p RBrace }
+  "["                                  { \p s -> newToken p LBracket }
+  "]"                                  { \p s -> newToken p RBracket }
   bool                                 { \p s -> newToken p (Id s) }
   nat                                  { \p s -> newToken p (Id s) }
   int                                  { \p s -> newToken p (Id s) }
@@ -105,6 +107,8 @@ data TokenSymbol =
   RParen |
   LBrace |
   RBrace |
+  LBracket |
+  RBracket |
   Assign    | 
   Divide    |
   Times     |
