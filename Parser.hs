@@ -98,6 +98,8 @@ parseStatement = (try parseReturn)
 	<|> (try parseDecStatement) 
 	<|> (try parseAssignment)
 	<|> (try parseCondition)
+	<|> (try parseProcCall)
+	<|> (try parseWriteCall)
 	-- TODO: other statement types
 
 parseDecStatement :: OWLParser Statement
@@ -139,3 +141,17 @@ parseElse = do
 parseEmptyElse :: OWLParser [Statement]
 parseEmptyElse = do
 	return []
+
+parseProcCall :: OWLParser Statement
+parseProcCall = do
+	name <- identifier
+	args <- parens (sepBy parseExpr comma)
+	semi
+	return $ ProcCall name args
+
+parseWriteCall :: OWLParser Statement
+parseWriteCall = do
+	writeToken
+	arg <- parens parseExpr
+	semi
+	return $ WriteCall arg

@@ -24,6 +24,12 @@ funcToken = tokenPrim show updatePos (simpleGetToken Func)
 procToken :: TokenParser
 procToken = tokenPrim show updatePos (simpleGetToken Proc)
 
+readToken :: TokenParser
+readToken = tokenPrim show updatePos (simpleGetToken Read)
+
+writeToken :: TokenParser
+writeToken = tokenPrim show updatePos (simpleGetToken Write)
+
 ---------------------------------------------------------------------------------------------------
 -- Statement key words
 ---------------------------------------------------------------------------------------------------

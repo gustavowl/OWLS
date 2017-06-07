@@ -219,7 +219,7 @@ parseRelationalTail = do
 
 parseStuffExpr :: OWLParser Expr
 parseStuffExpr = do
-	expr <- (try parseStuffFuncCall) <|> parseStuffID
+	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> parseStuffID
 	return $ StuffExpr expr
 
 parseStuffID :: OWLParser StuffNode
@@ -231,6 +231,12 @@ parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do
 	(name, args) <- parseFuncCall
 	return $ StuffFuncCall name args
+
+parseReadCall :: OWLParser StuffNode
+parseReadCall = do
+	readToken
+	arg <- parens parseExpr
+	return $ StuffReadCall arg
 
 ---------------------------------------------------------------------------------------------------
 -- Generic Function Call
