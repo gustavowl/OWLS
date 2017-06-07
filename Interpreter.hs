@@ -9,6 +9,10 @@ runProgram (decs, main) = do
 	let nextState = callFunction "main" [] (AtomicType "int") state -- TODO: pegar parâmetros do main
 	print (decs, main)
 
+getMainParams :: Declaration -> [Declaration]
+getMainParams (Function main params (AtomicType "int") body) = params
+getMainParams _ = []
+
 addGlobalDecs :: [Declaration] -> OWLState -> OWLState
 addGlobalDecs decs state = state -- TODO: adicionar todas as declarações
 
