@@ -7,7 +7,7 @@ import ProgramTree
 ---------------------------------------------------------------------------------------------------
 
 -- Pilha de escopos, lista de tipos definidos pelo usuário
-type OWLState = ([Scope], [UserType])
+type OWLState = ([Scope], [UserType])  
 
 -- ID do escopo atual, ID do escopo ancestral, tabela de símbolos
 type Scope = (Integer, Integer, [TableEntry])
@@ -36,6 +36,22 @@ data VarValue = NumberValue Double
 type Key = (String, Integer)
 
 ---------------------------------------------------------------------------------------------------
+-- Gambiarras
+---------------------------------------------------------------------------------------------------
+
+nullScope :: Scope 
+nullScope = (-1, -1, [])
+
+nullKey :: Key
+nullKey = ("NULL", -1)
+
+nullVarType :: VarType
+nullVarType = AtomicType "NULL"
+
+nullVarValue :: VarValue
+nullVarValue = NumberValue 123456
+
+---------------------------------------------------------------------------------------------------
 -- Symbol Table Access
 ---------------------------------------------------------------------------------------------------
 
@@ -48,10 +64,10 @@ newScope newParentID ((currentID, parentID, table):scopeList, types) =
 -- Scope Resolution
 ---------------------------------------------------------------------------------------------------
 
-getScope :: Integer -> OWLState -> Maybe Scope
+getScope :: Integer -> OWLState -> Scope
 getScope scopeID (stack, _) = f (popToScope scopeID stack) where
-	f [] = Nothing
-	f (h:t) = Just h
+	f [] = nullScope
+	f (h:t) = h
 
 getScopeID :: String -> OWLState -> Integer
 getScopeID name (stack, _) = searchVarScope name stack
@@ -81,17 +97,28 @@ isInScope name ((varName, _, _):t) =
 		isInScope name t
 
 ---------------------------------------------------------------------------------------------------
--- Table Update
+-- Table
 ---------------------------------------------------------------------------------------------------
 
 addVarDec :: String -> VarType -> OWLState -> OWLState
-addVarDec name varType ([(a, b, [])], types) = ([(a, b, [])], types)
-addVarDec name varType ([(a, b, h:table)], types) = let
+addVarDec name varType ([(a, b, table)], types) = let
 	newElement = (name, varType, getInitValue varType) in
 	([(a, b, newElement:table)], types)
 
 updateVar :: VarValue -> Key -> OWLState -> OWLState
 updateVar value key state = state -- TODO: mudar o valor da variável
+
+getVar :: Key -> OWLState -> (VarType, VarValue)
+getVar (name, scopeID) state = let
+	(_, _, table) = getScope scopeID state in getVarFromTable name table
+
+getVarFromTable :: String -> [TableEntry] -> (VarType, VarValue)
+getVarFromTable name [] = (nullVarType, nullVarValue)
+getVarFromTable name ((name', t, v):table) = 
+	if name == name' then 
+		(t, v)
+	else 
+		getVarFromTable name table
 
 {-
 extractParamType :: Declaration -> VarType
