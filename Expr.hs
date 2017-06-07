@@ -4,7 +4,6 @@ import Text.ParserCombinators.Parsec
 import Text.Parsec.Combinator
 import Lexer
 import ProgramTree
-import FuncCall
 import qualified Tokens
 
 ---------------------------------------------------------------------------------------------------
@@ -41,8 +40,8 @@ parseNumID = do
 
 parseNumFuncCall :: OWLParser NumNode
 parseNumFuncCall = do
-	(name, params) <- parseFuncCall
-	return $ NumFuncCall name params
+	(name, args) <- parseFuncCall
+	return $ NumFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Literal Leaf Terms
@@ -143,8 +142,8 @@ parseBoolID = do
 
 parseBoolFuncCall :: OWLParser BoolNode
 parseBoolFuncCall = do
-	(name, params) <- parseFuncCall
-	return $ BoolFuncCall name params
+	(name, args) <- parseFuncCall
+	return $ BoolFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
 -- Gramar - Unary Operators
@@ -230,13 +229,15 @@ parseStuffID = do
 
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do
-	(name, params) <- parseFuncCall
-	return $ StuffFuncCall name params
+	(name, args) <- parseFuncCall
+	return $ StuffFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Stuff
+-- Generic Function Call
 ---------------------------------------------------------------------------------------------------
 
 parseFuncCall :: OWLParser (String, [Expr])
 parseFuncCall = do
-	return ("", []) -- TODO
+	id <- identifier
+	args <- parens $ sepBy parseExpr comma
+	return (id, args)

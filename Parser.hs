@@ -6,6 +6,7 @@ import Data.Functor.Identity
 import Control.Monad
 import ProgramTree
 import Expr
+import TypeExpr
 import Lexer
 import qualified Tokens as T
 
@@ -77,26 +78,6 @@ parseParamDec = do
 	colon
 	t <- parseVarType <|> parseFuncType <|> parseProcType
 	return $ Var name t Nothing
-
-parseVarType :: OWLParser VarType
-parseVarType = do
-	id <- identifier
-	-- TODO: verificar se o tipo existe 
-	-- TODO: parar de ignorar os outros tipos
-	return $ AtomicType id 
-
-parseFuncType :: OWLParser VarType
-parseFuncType = do
-	funcToken
-	params <- parseParamList
-	ret <- brackets parseVarType
-	return $ FuncType params ret
-
-parseProcType :: OWLParser VarType
-parseProcType = do
-	procToken
-	params <- parseParamList
-	return $ ProcType params
 
 parseInitialValue :: OWLParser Expr
 parseInitialValue = do
