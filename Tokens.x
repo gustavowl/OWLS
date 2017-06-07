@@ -84,6 +84,8 @@ tokens :-
   case                                 { \p s -> newToken p Case}
   return                               { \p s -> newToken p Return}
   break                                { \p s -> newToken p Break}
+  read                                 { \p s -> newToken p Read}
+  write                                { \p s -> newToken p Write}
   $digit+                              { \p s -> newToken p (Nat (read s))}
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
@@ -102,6 +104,8 @@ data TokenSymbol =
   Main |
   Func |
   Proc |
+  Read |
+  Write |
   Colon   |
   SemiColon |
   Comma |

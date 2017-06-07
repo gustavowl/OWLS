@@ -21,6 +21,8 @@ data Statement = VarDec Declaration
 	| Assignment String Expr
 	| If Expr [Statement] [Statement]
 	| Return Expr
+	| ProcCall String [Expr]
+	| WriteCall Expr
 	deriving (Eq,Show)
 	-- TODO: mais coisa
 
@@ -58,10 +60,9 @@ data NumNode = NumNat Double
 	| NumMod NumNode NumNode
 	deriving (Eq,Show)
 
--- TODO: CharNode
-
 data StuffNode = StuffID String
 	| StuffFuncCall String [Expr]
+	| StuffReadCall Expr
 	deriving (Eq,Show)
 
 data VarType = AtomicType String 
