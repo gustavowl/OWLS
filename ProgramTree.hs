@@ -67,7 +67,7 @@ data StuffNode = StuffID String
 data VarType = AtomicType String 
 	| ArrayType VarType Expr
 	| PointerType VarType
-	| FuncType [VarType] VarType
+	| FuncType [VarType] VarType -- params, retorno
 	| ProcType [VarType]
 	deriving (Eq,Show)
 
