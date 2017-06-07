@@ -94,7 +94,8 @@ parseBlock :: OWLParser [Statement]
 parseBlock = braces $ many parseStatement
 
 parseStatement :: OWLParser Statement
-parseStatement = (try parseReturn)
+parseStatement = (try parseProcRet)
+	<|> (try parseFuncRet)
 	<|> (try parseDecStatement) 
 	<|> (try parseAssignment)
 	<|> (try parseCondition)
@@ -111,12 +112,18 @@ parseDecStatement = do
 		f (Function n p r b) = return $ FuncDec (Function n p r b)
 		f (Procedure n p b) = return $ ProcDec (Procedure n p b)
 
-parseReturn :: OWLParser Statement
-parseReturn = do
+parseProcRet :: OWLParser Statement
+parseProcRet = do
+	returnToken
+	semi
+	return ProcRet
+
+parseFuncRet :: OWLParser Statement
+parseFuncRet = do
 	returnToken
 	expr <- parseExpr
 	semi
-	return $ Return expr
+	return $ FuncRet expr
 
 parseAssignment :: OWLParser Statement
 parseAssignment = do

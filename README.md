@@ -31,3 +31,6 @@ By executing this command, the interpreter will execute the desired code. It is 
 - [ ] Resolve TODOs in FuncCall.hs
 - [ ] Resolve TODOs in Tokens.x
 - [ ] Resolve TODOs in Tokens.hs (?)
+
+# Install 
+cabal install split

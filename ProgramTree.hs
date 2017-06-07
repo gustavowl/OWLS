@@ -20,11 +20,13 @@ data Statement = VarDec Declaration
 	| ProcDec Declaration
 	| Assignment String Expr
 	| If Expr [Statement] [Statement]
+	| FuncRet Expr
+	| ProcRet
 	| While Expr [Statement]
 	| For Declaration Expr Expr [Statement]
-	| Return Expr
 	| ProcCall String [Expr]
 	| WriteCall Expr
+
 	deriving (Eq,Show)
 	-- TODO: mais coisa
 
