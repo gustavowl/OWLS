@@ -16,6 +16,6 @@ func bla1 (a : int, b : int) : int {}
 
 main() {
 	x : int;
-	x = '1';
+	x = "12";
 	return 10 + 50 * 2 - 5;
 }

@@ -219,7 +219,7 @@ parseRelationalTail = do
 
 parseStuffExpr :: OWLParser Expr
 parseStuffExpr = do
-	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> (try parseStuffID) <|> parseStuffChar
+	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> (try parseStuffID) <|> (try parseStuffChar) <|> parseStuffString
 	return $ StuffExpr expr
 
 parseStuffID :: OWLParser StuffNode
@@ -231,6 +231,20 @@ parseStuffChar :: OWLParser StuffNode
 parseStuffChar = do
 	s <- cchar
 	return $ StuffChar s
+
+parseStuffArray :: OWLParser StuffNode
+parseStuffArray = parseStuffGenericArray <|> parseStuffString
+--- Falta Terminar ... Vitor vai terminar HJ A NOITE
+
+parseStuffGenericArray :: OWLParser StuffNode
+parseStuffGenericArray = do
+	s <- sstring
+	return $ StuffString s
+
+parseStuffString :: OWLParser StuffNode
+parseStuffString = do
+	s <- sstring
+	return $ StuffString s
 
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do
