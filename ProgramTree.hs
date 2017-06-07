@@ -4,7 +4,6 @@ import Data.Functor.Identity
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Prim
 import Text.Parsec.Combinator
-import Control.Monad
 import Text.Show.Functions
 import Tokens
 
@@ -66,10 +65,10 @@ data StuffNode = StuffID String
 	deriving (Eq,Show)
 
 data VarType = AtomicType String 
-	| ArrayType VarType Integer
+	| ArrayType VarType Expr
 	| PointerType VarType
-	| FuncType [Declaration] VarType
-	| ProcType [Declaration]
+	| FuncType [VarType] VarType
+	| ProcType [VarType]
 	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------

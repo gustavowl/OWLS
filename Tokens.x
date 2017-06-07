@@ -72,6 +72,8 @@ tokens :-
   "<="                                 { \p s -> newToken p LessEq}
   ">="                                 { \p s -> newToken p GreaterEq}
   "!"                                  { \p s -> newToken p Exclamation}
+  "@"                                  { \p s -> newToken p At}
+  "$"                                  { \p s -> newToken p Dollar}
   true                                 { \p s -> newToken p (Bool True) }
   false                                { \p s -> newToken p (Bool False) }
   if                                   { \p s -> newToken p If}
@@ -86,8 +88,8 @@ tokens :-
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
   $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s)}
-  \" @string* \"                       {\p s -> newToken p (String (read s))}
-  \' @string? \'                       {\p s -> newToken p (Char (read s))}
+  \" @string* \"                       { \p s -> newToken p (String (read s))}
+  \' @string? \'                       { \p s -> newToken p (Char (read s))}
 
 {
 
@@ -126,6 +128,8 @@ data TokenSymbol =
   Greater    |
   LessEq |
   GreaterEq |
+  At |
+  Dollar |
   If  |
   Else |  
   For |

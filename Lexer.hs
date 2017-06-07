@@ -133,6 +133,12 @@ candToken = tokenPrim show updatePos (simpleGetToken And_cir)
 corToken :: TokenParser
 corToken = tokenPrim show updatePos (simpleGetToken Or_cir)
 
+atToken :: TokenParser
+atToken = tokenPrim show updatePos (simpleGetToken At)
+
+dollarToken :: TokenParser
+dollarToken = tokenPrim show updatePos (simpleGetToken Dollar)
+
 ---------------------------------------------------------------------------------------------------
 -- Relational
 ---------------------------------------------------------------------------------------------------
