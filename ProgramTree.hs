@@ -20,7 +20,8 @@ data Statement = VarDec Declaration
 	| ProcDec Declaration
 	| Assignment String Expr
 	| If Expr [Statement] [Statement]
-	| Return Expr
+	| FuncRet Expr
+	| ProcRet
 	| ProcCall String [Expr]
 	| WriteCall Expr
 	deriving (Eq,Show)
