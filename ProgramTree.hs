@@ -61,6 +61,9 @@ data NumNode = NumNat Double
 	deriving (Eq,Show)
 
 data StuffNode = StuffID String
+	| StuffChar Char
+	| StuffArray [Expr]
+	| StuffString String
 	| StuffFuncCall String [Expr]
 	| StuffReadCall Expr
 	deriving (Eq,Show)
