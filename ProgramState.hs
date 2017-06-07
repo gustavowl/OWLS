@@ -81,9 +81,19 @@ isInScope name ((varName, _, _):t) =
 		isInScope name t
 
 ---------------------------------------------------------------------------------------------------
--- Declarations
+-- Table Update
 ---------------------------------------------------------------------------------------------------
 
+addVarDec :: String -> VarType -> OWLState -> OWLState
+addVarDec name varType ([(a, b, [])], types) = ([(a, b, [])], types)
+addVarDec name varType ([(a, b, h:table)], types) = let
+	newElement = (name, varType, getInitValue varType) in
+	([(a, b, newElement:table)], types)
+
+updateVar :: VarValue -> Key -> OWLState -> OWLState
+updateVar value key state = state -- TODO: mudar o valor da variável
+
+{-
 extractParamType :: Declaration -> VarType
 extractParamType (Var _ varType _) = varType
 extractParamType (Function _ params ret _) = FuncType (extractParamTypes params) ret
@@ -93,18 +103,17 @@ extractParamTypes :: [Declaration] -> [VarType]
 extractParamTypes [] = []
 extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)  
 
-setVarValue :: VarType -> (Maybe Expr) -> VarValue
-setVarValue varType (Just expr) = getInitValue varType -- TODO: avaliar expressão
-setVarValue varType Nothing = getInitValue varType 
+setVarValue :: VarType -> (Maybe Expr) -> State -> VarValue
+setVarValue varType (Just expr) state = getInitValue varType -- TODO: avaliar expressão
+setVarValue varType Nothing _ = getInitValue varType 
 
 -- scope é id do ancestral
 addDec :: Declaration -> Integer -> [TableEntry] -> [TableEntry]
-addDec (Var name varType expr) _ table = (name, varType, setVarValue varType expr) : table
+addDec (Var name varType expr) _ table = (name, varType, setVarValue varType expr state) : table
 addDec (Function name params ret body) scope table = 
 	(name, FuncType (extractParamTypes params) ret, FuncValue scope params body) : table
 addDec (Procedure name params body) scope table = 
 	(name, ProcType (extractParamTypes params), ProcValue scope params body) : table
-
 
 -- lista de declaração, id do escopo atual
 addGlobalDecsTable :: [Declaration] -> Integer -> [TableEntry] -> [TableEntry]
@@ -113,12 +122,14 @@ addGlobalDecsTable (h:decs) scope table = addGlobalDecsTable decs scope (addDec 
 
 addGlobalDecs :: [Declaration] -> OWLState -> OWLState
 addGlobalDecs decs ([(current, ances, table)], userType) = 
-	let newTable = addGlobalDecsTable decs current table in ([(current, ances, newTable)], userType)
+	let newState = addGlobalDecsTable decs current table in ([(current, ances, newTable)], userType)
 
 addLocalDec :: Declaration -> OWLState -> OWLState
 addLocalDec (Var name t Nothing) state = state -- TODO
 addLocalDec (Var name t (Just v)) state = state -- TODO
 addLocalDec _ state = state -- TODO
+
+-}
 
 -- TODO
 -- ...
