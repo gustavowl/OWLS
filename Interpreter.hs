@@ -8,7 +8,7 @@ runProgram :: Program -> IO()
 runProgram (decs, main) = do
 	state <- addGlobalDecs decs initState
 	nextState <- callFunction "main" getMainParams (AtomicType "int") state 
-	print ""
+	print (decs, main)
 
 addGlobalDecs :: [Declaration] -> OWLState -> IO OWLState
 addGlobalDecs [] state = do return state
@@ -34,14 +34,29 @@ runStatement :: Statement -> Maybe VarType -> OWLState -> IO (OWLState, Maybe Va
 runStatement (VarDec dec) _ state = do 
 	bla <- addDec dec state
 	return (bla, Nothing)
+
+runStatement (FuncDec dec) _ state = do
+	return (state, Nothing)
+runStatement (ProcDec dec) _ state = do
+	return (state, Nothing)
+runStatement (Assignment name assign) _ state = do
+	return (state, Nothing)
+runStatement (If expr ifbody elsebody) _ state = do
+	return (state, Nothing)
+runStatement (While expr body) _ state = do
+	return (state, Nothing)
+runStatement (For ini expr loopExpr body) _ state = do
+	return (state, Nothing)
+runStatement (ProcCall name params) _ state = do
+	return (state, Nothing)
 runStatement (WriteCall expr) _ state = do 
 	return (state, Nothing)
 runStatement (Return expr) Nothing state = do 
 	return (state, Nothing) -- TODO: é pra dar erro
 runStatement (Return expr) (Just t) state = do 
-	return (state, Nothing) -- TODO: é pra calcular a expr, comparar o tipo resultante dela com o t e retornar o valor dela no lugar no Nothing
-runStatement stmt t state = do 
-	return (state, Nothing) -- TODO: definir o que fazer para cada tipo de stmt definido no ProgramTree
+	return (state, Nothing) 
+	-- TODO: é pra calcular a expr, comparar o tipo resultante dela com o t e retornar 
+	-- o valor dela no lugar no Nothing
 
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression

@@ -48,6 +48,12 @@ switchToken = tokenPrim show updatePos (simpleGetToken Switch)
 caseToken :: TokenParser
 caseToken = tokenPrim show updatePos (simpleGetToken Case)
 
+whileToken :: TokenParser
+whileToken = tokenPrim show updatePos (simpleGetToken While)
+
+forToken :: TokenParser
+forToken = tokenPrim show updatePos (simpleGetToken For)
+
 returnToken :: TokenParser
 returnToken = tokenPrim show updatePos (simpleGetToken Return)
 

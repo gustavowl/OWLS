@@ -100,6 +100,8 @@ parseStatement = (try parseReturn)
 	<|> (try parseCondition)
 	<|> (try parseProcCall)
 	<|> (try parseWriteCall)
+	<|> (try parseWhile)
+	<|> (try parseFor)
 	-- TODO: other statement types
 
 parseDecStatement :: OWLParser Statement
@@ -155,3 +157,24 @@ parseWriteCall = do
 	arg <- parens parseExpr
 	semi
 	return $ WriteCall arg
+
+parseWhile :: OWLParser Statement
+parseWhile = do
+	whileToken
+	lparen
+	expr <- parseBoolExpr
+	rparen
+	body <- parseBlock
+	return $ While expr body
+
+parseFor :: OWLParser Statement
+parseFor = do
+	forToken
+	lparen
+	ini <- parseDeclaration
+	semi
+	expr <- parseBoolExpr
+	semi
+	loopExpr <- parseExpr
+	body <- parseBlock
+	return $ For ini expr loopExpr body

@@ -17,5 +17,8 @@ func bla1 (a : int, b : int) : int {}
 main() {
 	x : int;
 	x = "12";
+	while (a > 0) {
+		a = a + 1;
+	}
 	return 10 + 50 * 2 - 5;
 }
