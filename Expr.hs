@@ -197,9 +197,9 @@ parseRelational = (try parseRelationalTail) <|> parseBoolLeaf
 
 parseRelationalTail :: OWLParser BoolNode
 parseRelationalTail = do
-	e1 <- parseExpr
+	e1 <- parseNumExpr
 	op <- greaterToken <|> greaterEqToken <|> lessToken <|> lessEqToken <|> eqToken <|> difToken
-	e2 <- parseExpr
+	e2 <- parseNumExpr
 	if op == Tokens.Equals then
 		return $ BoolEq e1 e2
 	else if op == Tokens.Not_Equals then
@@ -219,13 +219,18 @@ parseRelationalTail = do
 
 parseStuffExpr :: OWLParser Expr
 parseStuffExpr = do
-	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> parseStuffID
+	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> (try parseStuffID) <|> parseStuffChar
 	return $ StuffExpr expr
 
 parseStuffID :: OWLParser StuffNode
 parseStuffID = do
 	name <- identifier
 	return $ StuffID name
+
+parseStuffChar :: OWLParser StuffNode
+parseStuffChar = do
+	s <- cchar
+	return $ StuffChar s
 
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do

@@ -90,8 +90,8 @@ tokens :-
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
   $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s)}
-  \" @string* \"                       { \p s -> newToken p (String (read s))}
-  \' @string? \'                       { \p s -> newToken p (Char (read s))}
+  \" @string* \"                       { \p s -> newToken p (SString (read s))}
+  \' @string? \'                       { \p s -> newToken p (CChar (read s))}
 
 {
 
@@ -147,8 +147,8 @@ data TokenSymbol =
   Nat Double |
   Int Double |
   Real Double |
-  Char Char |
-  String String 
+  CChar Char |
+  SString String 
   deriving (Eq,Show)
 
 newToken :: AlexPosn -> TokenSymbol -> Token

@@ -10,6 +10,7 @@ type TokenParser = P.OWLParser TokenSymbol
 type IDParser = P.OWLParser String
 type NumParser = P.OWLParser Double
 type BoolParser = P.OWLParser Bool
+type CharParser = P.OWLParser Char
 
 ---------------------------------------------------------------------------------------------------
 -- Program key words
@@ -191,14 +192,14 @@ boolean = tokenPrim show updatePos getToken where
 	getToken (Token (Bool a) l c) = Just a
 	getToken _ = Nothing
 
-cchar :: TokenParser
+cchar :: CharParser
 cchar = tokenPrim show updatePos getToken where
-	getToken (Token (Char s) l c) = Just (Char s)
+	getToken (Token (CChar s) l c) = Just s
 	getToken _ = Nothing
 
 sstring :: TokenParser
 sstring = tokenPrim show updatePos getToken where
-	getToken (Token (String s) l c) = Just (String s)
+	getToken (Token (SString s) l c) = Just (SString s)
 	getToken _ = Nothing
 
 identifier :: IDParser

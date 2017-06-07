@@ -60,6 +60,9 @@ data NumNode = NumNat Double
 	| NumMod NumNode NumNode
 	deriving (Eq,Show)
 
+data CharNode = NumNat Double
+	deriving (Eq,Show)
+
 data StuffNode = StuffID String
 	| StuffChar Char
 	| StuffFuncCall String [Expr]
