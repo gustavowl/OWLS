@@ -120,7 +120,16 @@ getVarFromTable name ((name', t, v):table) =
 	else 
 		getVarFromTable name table
 
-{-
+addFuncDec :: String -> [Declaration] -> VarType -> [Statement] -> OWLState -> OWLState
+addFuncDec name params ret body ([(a, b, table)], types) = let 
+	newFuncDec = (name, FuncType (extractParamTypes params) ret, FuncValue a params body) in
+	([(a, b, newFuncDec:table)], types)
+
+addProcDec :: String -> [Declaration] -> [Statement] -> OWLState -> OWLState
+addProcDec name params body ([(a, b, table)], types) = let 
+	newProcDec = (name, ProcType (extractParamTypes params), ProcValue a params body) in
+	([(a, b, newProcDec:table)], types)
+
 extractParamType :: Declaration -> VarType
 extractParamType (Var _ varType _) = varType
 extractParamType (Function _ params ret _) = FuncType (extractParamTypes params) ret
@@ -128,8 +137,9 @@ extractParamType (Procedure _ params _) = ProcType (extractParamTypes params)
 
 extractParamTypes :: [Declaration] -> [VarType]
 extractParamTypes [] = []
-extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)  
+extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)
 
+{-
 setVarValue :: VarType -> (Maybe Expr) -> State -> VarValue
 setVarValue varType (Just expr) state = getInitValue varType -- TODO: avaliar expressão
 setVarValue varType Nothing _ = getInitValue varType 
