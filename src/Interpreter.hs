@@ -128,12 +128,8 @@ runStatement (For ini expr incr body) state = do
 runStatement (ProcCall name params) state = do
 	return (state, Continue)
 runStatement (WriteCall expr) state1 = do 
-	--print state1
-	--print expr --DELETE this line
 	(t, v, state2) <- evalExpr expr state1
-	print t
-	print v --DELETE this line
-	--print state2
+	print v --TODO stop printing VarType and only print value (e.g. NumberValue)
 	return (state2, Continue)
 runStatement (Assignment name assign) state = do
 	return (state, Continue)
@@ -231,12 +227,41 @@ evalBoolExpr (BoolLt e1 e2) state = evalBoolExpr (BoolGt e2 e1) state
 evalBoolExpr (BoolLtEq e1 e2) state = evalBoolExpr (BoolGtEq e2 e1) state
 
 evalNumExpr :: NumNode -> OWLState -> IO (Double, String, OWLState)
+--evaluates addition
+evalNumExpr (NumAdd node1 node2) state = do
+	(val1, typ1, state1) <- evalNumExpr node1 state
+	(val2, typ2, state2) <- evalNumExpr node2 state
+	--TODO evaluate type for coersion
+	return (val1 + val2, "nat", state)
+
+--evaluates subtraction
+evalNumExpr (NumSub node1 node2) state = do
+	(val1, typ1, state1) <- evalNumExpr node1 state
+	(val2, typ2, state2) <- evalNumExpr node2 state
+	--TODO evaluate type for coersion
+	return (val1 - val2, "nat", state)
+
+--evaluates multiplication
+evalNumExpr (NumMul node1 node2) state = do
+	(val1, typ1, state1) <- evalNumExpr node1 state
+	(val2, typ2, state2) <- evalNumExpr node2 state
+	--TODO evaluate type for coersion
+	return (val1 * val2, "nat", state)
+--evaluates division TODO ask Luisa about return type of two int.
+-- Always real or just entire part?
+evalNumExpr (NumDiv node1 node2) state = do
+	(val1, typ1, state1) <- evalNumExpr node1 state
+	(val2, typ2, state2) <- evalNumExpr node2 state
+	--TODO evaluate type for coersion
+	return (val1 / val2, "TODO", state)
+--TODO evaluate mod. Search how to mod in python
+
 evalNumExpr node state = do 
 	--typ: type; val: value represented/contained in node
+	--print node
 	(val, typ, state2) <- evalNumLeaf node state
 	-- TODO evaluate for other expressions (recursion)
 	return (val, typ, state)
-
 --returns the value. the type of the number and the state
 evalNumLeaf :: NumNode -> OWLState -> IO (Double, String, OWLState)
 --Evaluates for natural numbers
@@ -245,8 +270,9 @@ evalNumLeaf (NumNat n) state = do return (n, "nat", state)
 evalNumLeaf (NumInt n) state = do return (n, "int", state)
 --Evaluates for real numbers
 evalNumLeaf (NumReal n) state = do return (n, "real", state)
-
-evalNumLeaf _ state = do return (0, "só pro Haskell não frescar", state)
+{--Else case TODO whenever this message is printed, there is an expression that was not properly
+evaluated-}
+evalNumLeaf node state = do return (0, "só pro Haskell não frescar", state)
 
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
