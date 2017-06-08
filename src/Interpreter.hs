@@ -82,8 +82,10 @@ runFuncBody name (s:stmts) expectedType state1 = do
 		f (state2, Continue) = runFuncBody name stmts expectedType state2 >>= return
 		f (state2, Return expr) = do 
 			(exprType, value, state3) <- evalExpr expr state2
-			-- TODO: checar tipos exprType x expectedType
-			return (state3, value)
+			if checkType exprType expectedType then 
+				return (state3, value)
+			else
+				fail "WTF"
 		f _ = fail "WTF"
 
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
@@ -258,9 +260,29 @@ addDec :: Declaration -> OWLState -> IO OWLState
 addDec (Var name varType Nothing) state = do return $ addVarDec name varType state
 addDec (Var name varType (Just e)) state1 = do 
 	(t, value, state2) <- evalExpr e state1
-	-- TODO: verificar tipo t com o tipo da variavel
-	let state3 = addVarDec name varType state2
-	let scopeID = getScopeID name state3
-	return $ updateVar value (name, scopeID) state3
-addDec _ state = do return state -- TODO: Function e Procedure
+	if checkType t varType then do -- TODO: verificar tipo t com o tipo da variavel
+		let state3 = addVarDec name varType state2
+		let scopeID = getScopeID name state3
+		return $ updateVar value (name, scopeID) state3
+	else 
+		fail "Variable not compatible."
+addDec (Function name params ret body) state = do
+	return $ addFuncDec name params ret body state
+addDec (Procedure name params body) state = do
+	return $ addProcDec name params body state
 
+---------------------------------------------------------------------------------------------------
+-- Declarations
+---------------------------------------------------------------------------------------------------
+-- ordem dos argumentos: tipo da variável; tipo esperado da variável
+checkType :: VarType -> VarType -> Bool
+checkType (AtomicType "nat") (AtomicType "nat") = True
+checkType (AtomicType "int") (AtomicType "int") = True
+checkType (AtomicType "real") (AtomicType "real") = True
+checkType (AtomicType "nat") (AtomicType "int") = True
+checkType (AtomicType "int") (AtomicType "real") = True 
+checkType (AtomicType "nat") (AtomicType "real") = True
+checkType (AtomicType "bool") (AtomicType "bool") = True
+checkType (AtomicType "char") (AtomicType "char") = True
+checkType (AtomicType "char") (AtomicType "nat") = True
+checkType v1 v2 = True -- TODO: inserir demais tipos
