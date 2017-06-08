@@ -38,6 +38,7 @@ data Expr = BoolExpr BoolNode
 
 data BoolNode = BoolLit Bool
 	| BoolID String 
+	| BoolEl StuffNode NumNode
 	| BoolFuncCall String [Expr] 
 	| BoolNot BoolNode
 	| BoolAnd BoolNode BoolNode
@@ -56,6 +57,7 @@ data NumNode = NumNat Double
 	| NumInt Double
 	| NumReal Double
 	| NumID String
+	| NumEl StuffNode NumNode
 	| NumFuncCall String [Expr]
 	| NumMinus NumNode
 	| NumAdd NumNode NumNode
@@ -66,13 +68,12 @@ data NumNode = NumNat Double
 	deriving (Eq,Show)
 
 data StuffNode = StuffID String
+	| StuffEl StuffNode NumNode
 	| StuffChar Char
 	| StuffArray [Expr]
 	| StuffFuncCall String [Expr]
 	| StuffReadCall Expr
 	deriving (Eq,Show)
-
-
 
 data VarType = AtomicType String 
 	| ArrayType VarType Expr

@@ -11,51 +11,32 @@ import qualified Tokens
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: OWLParser Expr
-parseExpr = (try parseNumExpr) <|> (try parseBoolExpr) <|> (try parseArrayExpr) <|> parseStuffExpr
-
-
-
-
-
-
-
-
--- BUGADO -- Falta concertar o array
-parseArrayExpr :: OWLParser Expr
-parseArrayExpr = do
-	lbrace
-	expr <- (try parseNumber) <|> parseNumID
-	comma
-	rbrace
-	return $ NumExpr expr
-
-
-parseTaillArray :: OWLParser Expr
-parseTaillArray = (try parseNumExpr) <|> (try parseBoolExpr) <|> (try parseStuffExpr)
-
-
-
-
-
+parseExpr = (try parseNumExpr) 
+	<|> (try parseBoolExpr) 
+	<|> parseStuffExpr
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Numeric
+-- Numeric Expr
 ---------------------------------------------------------------------------------------------------
 
 parseNumExpr :: OWLParser Expr
 parseNumExpr = do
-	expr <- parseAddChain
+	expr <- parseNumNode
 	return $ NumExpr expr
+
+parseNumNode :: OWLParser NumNode
+parseNumNode = parseAddChain
 
 parseNumLeaf :: OWLParser NumNode
 parseNumLeaf = (try parseNumUnary)
 	<|> (try parseNumber)
-	<|> (try (parens parseAddChain))
+	<|> (try (parens parseNumNode))
 	<|> (try parseNumFuncCall)
+	<|> (try parseNumEl)
 	<|> parseNumID
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Leaf Terms
+-- Numeric Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
 parseNumID :: OWLParser NumNode
@@ -63,13 +44,18 @@ parseNumID = do
 	name <- identifier
 	return $ NumID name
 
+parseNumEl :: OWLParser NumNode
+parseNumEl = do
+	(array, size) <- parseArrayEl
+	return $ NumEl array size
+
 parseNumFuncCall :: OWLParser NumNode
 parseNumFuncCall = do
 	(name, args) <- parseFuncCall
 	return $ NumFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Literal Leaf Terms
+-- Numeric Literal Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
 parseNumber :: OWLParser NumNode
@@ -91,7 +77,7 @@ parseReal = do
 	return $ NumReal n
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Unary Operators
+-- Numeric Unary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseNumUnary :: OWLParser NumNode
@@ -104,7 +90,7 @@ parseMinus = do
 	return $ NumMinus expr
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Binary Operators
+-- Numeric Binary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseAddChain :: OWLParser NumNode
@@ -136,23 +122,27 @@ parseMulChainTail = do
 		return $ NumMod e1 e2
 
 ---------------------------------------------------------------------------------------------------
--- Grammar
+-- Boolean Expr
 ---------------------------------------------------------------------------------------------------
 
 parseBoolExpr :: OWLParser Expr
 parseBoolExpr = do
-	expr <- parseOrChain
+	expr <- parseBoolNode
 	return $ BoolExpr expr
+
+parseBoolNode :: OWLParser BoolNode
+parseBoolNode = parseOrChain
 
 parseBoolLeaf :: OWLParser BoolNode
 parseBoolLeaf = (try parseBoolUnary)
 	<|> (try parseBoolean)
-	<|> (try (parens parseOrChain))
+	<|> (try (parens parseBoolNode))
 	<|> (try parseBoolFuncCall)
+	<|> (try parseBoolEl)
 	<|> parseBoolID
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Leaf Terms
+-- Boolean Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
 parseBoolean :: OWLParser BoolNode
@@ -165,13 +155,18 @@ parseBoolID = do
 	name <- identifier
 	return $ BoolID name
 
+parseBoolEl :: OWLParser BoolNode
+parseBoolEl = do
+	(array, size) <- parseArrayEl
+	return $ BoolEl array size
+
 parseBoolFuncCall :: OWLParser BoolNode
 parseBoolFuncCall = do
 	(name, args) <- parseFuncCall
 	return $ BoolFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Unary Operators
+-- Boolean Unary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseBoolUnary :: OWLParser BoolNode
@@ -184,7 +179,7 @@ parseNeg = do
 	return $ BoolNot n
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Binary Operators
+-- Boolean Binary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseOrChain :: OWLParser BoolNode
@@ -214,7 +209,7 @@ parseAndChainTail = do
 		return $ BoolAndC e1 e2
 
 ---------------------------------------------------------------------------------------------------
--- Gramar - Relational Binary Operators
+-- Boolean Relational Binary Operators
 ---------------------------------------------------------------------------------------------------
 
 parseRelational :: OWLParser BoolNode
@@ -239,18 +234,32 @@ parseRelationalTail = do
 		return $ BoolLtEq e1 e2
 
 ---------------------------------------------------------------------------------------------------
--- Grammar - Stuff
+-- Stuff Expr
 ---------------------------------------------------------------------------------------------------
 
 parseStuffExpr :: OWLParser Expr
 parseStuffExpr = do
-	expr <- (try parseStuffFuncCall) <|> (try parseReadCall) <|> (try parseStuffID) <|> (try parseStuffChar) <|> parseStuffString
+	expr <- parseStuffNode
 	return $ StuffExpr expr
+
+parseStuffNode :: OWLParser StuffNode
+parseStuffNode = (try parseStuffFuncCall) 
+	<|> (try parseReadCall) 
+	<|> (try parseStuffID) 
+	<|> (try parseStuffChar)
+	<|> (try parseStuffArray)
+--	<|> (try parseStuffEl)
+	<|> parseStuffString
 
 parseStuffID :: OWLParser StuffNode
 parseStuffID = do
 	name <- identifier
 	return $ StuffID name
+
+parseStuffEl :: OWLParser StuffNode
+parseStuffEl = do
+	(array, size) <- parseArrayEl
+	return $ StuffEl array size
 
 parseStuffChar :: OWLParser StuffNode
 parseStuffChar = do
@@ -258,13 +267,9 @@ parseStuffChar = do
 	return $ StuffChar s
 
 parseStuffArray :: OWLParser StuffNode
-parseStuffArray = parseStuffGenericArray <|> parseStuffString
---- Falta Terminar ... Vitor vai terminar HJ A NOITE
-
-parseStuffGenericArray :: OWLParser StuffNode
-parseStuffGenericArray = do
-	-- TODO: ler uma array genérica com expressões dentro assim como está no bla2 de example.owls
-	return $ StuffArray []
+parseStuffArray = do
+	exprs <- braces (sepBy parseExpr comma)
+	return $ StuffArray exprs
 
 parseStuffString :: OWLParser StuffNode
 parseStuffString = do
@@ -287,7 +292,7 @@ parseReadCall = do
 	return $ StuffReadCall arg
 
 ---------------------------------------------------------------------------------------------------
--- Generic Function Call
+-- General Operators
 ---------------------------------------------------------------------------------------------------
 
 parseFuncCall :: OWLParser (String, [Expr])
@@ -295,3 +300,9 @@ parseFuncCall = do
 	id <- identifier
 	args <- parens $ sepBy parseExpr comma
 	return (id, args)
+
+parseArrayEl :: OWLParser (StuffNode, NumNode)
+parseArrayEl = do
+	array <- parseStuffNode
+	size <- brackets parseNumNode
+	return (array, size)
