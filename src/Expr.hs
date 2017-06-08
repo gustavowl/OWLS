@@ -11,7 +11,32 @@ import qualified Tokens
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: OWLParser Expr
-parseExpr = (try parseNumExpr) <|> (try parseBoolExpr) <|> parseStuffExpr
+parseExpr = (try parseNumExpr) <|> (try parseBoolExpr) <|> (try parseArrayExpr) <|> parseStuffExpr
+
+
+
+
+
+
+
+
+-- BUGADO -- Falta concertar o array
+parseArrayExpr :: OWLParser Expr
+parseArrayExpr = do
+	lbrace
+	expr <- (try parseNumber) <|> parseNumID
+	comma
+	rbrace
+	return $ NumExpr expr
+
+
+parseTaillArray :: OWLParser Expr
+parseTaillArray = (try parseNumExpr) <|> (try parseBoolExpr) <|> (try parseStuffExpr)
+
+
+
+
+
 
 ---------------------------------------------------------------------------------------------------
 -- Grammar - Numeric
@@ -239,12 +264,16 @@ parseStuffArray = parseStuffGenericArray <|> parseStuffString
 parseStuffGenericArray :: OWLParser StuffNode
 parseStuffGenericArray = do
 	s <- sstring
-	return $ StuffString s
+	return $ StuffArrayString s
 
 parseStuffString :: OWLParser StuffNode
 parseStuffString = do
 	s <- sstring
-	return $ StuffString s
+	return $ StuffArrayString $ convertToChar s
+
+convertToChar :: String -> String  
+convertToChar [] = []  
+convertToChar (x:xs) =  "(StuffChar '" ++ [x] ++ "')" ++ convertToChar xs
 
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do

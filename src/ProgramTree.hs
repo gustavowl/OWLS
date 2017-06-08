@@ -33,6 +33,7 @@ data Statement = VarDec Declaration
 data Expr = BoolExpr BoolNode 
 	| NumExpr NumNode 
 	| StuffExpr StuffNode
+	| StuffArray NumNode
 	deriving (Eq,Show)
 
 data BoolNode = BoolLit Bool
@@ -66,11 +67,12 @@ data NumNode = NumNat Double
 
 data StuffNode = StuffID String
 	| StuffChar Char
-	| StuffArray [Expr]
-	| StuffString String
+	| StuffArrayString String
 	| StuffFuncCall String [Expr]
 	| StuffReadCall Expr
 	deriving (Eq,Show)
+
+
 
 data VarType = AtomicType String 
 	| ArrayType VarType Expr
