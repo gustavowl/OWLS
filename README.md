@@ -24,15 +24,21 @@ By executing this command, the interpreter will execute the desired code. It is 
 
 ```>> ./main < ../example.owls```
 
-# TODO
-- [ ] Do TODO list
-- [ ] Resolve TODOs in Program.hs
-- [ ] Resolve TODOs in Expr.hs
-- [ ] Resolve TODOs in BoolExpr.hs
-- [ ] Resolve TODOs in State.hs
-- [ ] Resolve TODOs in FuncCall.hs
-- [ ] Resolve TODOs in Tokens.x
-- [ ] Resolve TODOs in Tokens.hs (?)
+# TASKS
+## List of unacquired tasks
+- [ ] Add Stuff to list
+## Tasks acquired and listed by person
+### Ana
+- [ ] ?
+### Gustavo
+- [ ] Change a variable value (ProgramState.hs:109)
+- [ ] Evaluate Number Expressions (Interpreter.hs:232-237)
+- [x] Evaluate Number Leaf (Interpreter.hs:241-247)
+- [ ] Correct write behavior for printing Numbers
+### Luisa
+- [ ] ?
+### Vitor
+- [ ] ?
 
 # Install 
 cabal install split

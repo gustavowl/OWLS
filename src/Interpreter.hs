@@ -3,6 +3,7 @@ module Interpreter where
 import System.IO
 import ProgramTree
 import ProgramState
+import Expr --needed for getting leaf nodes values
 
 runProgram :: Program -> IO()
 runProgram (decs, main) = do
@@ -111,8 +112,12 @@ runStatement (VarDec dec) state1 = do
 	state2 <- addDec dec state1
 	return (state2, Continue)
 runStatement (WriteCall expr) state1 = do 
+	--print state1
+	--print expr --DELETE this line
 	(t, v, state2) <- evalExpr expr state1
-	print v
+	--print t
+	--print v --DELETE this line
+	--print state2
 	return (state2, Continue)
 
 runStatement (FuncDec dec) state = do
@@ -225,8 +230,21 @@ evalBoolExpr (BoolLt e1 e2) state = evalBoolExpr (BoolGt e2 e1) state
 evalBoolExpr (BoolLtEq e1 e2) state = evalBoolExpr (BoolGtEq e2 e1) state
 
 evalNumExpr :: NumNode -> OWLState -> IO (Double, String, OWLState)
-evalNumExpr node state = do
-	return (0, "", state) -- TODO
+evalNumExpr node state = do 
+	--typ: type; val: value represented/contained in node
+	(val, typ, state2) <- evalNumLeaf node state
+	-- TODO evaluate for other expressions (recursion)
+	return (val, typ, state)
+
+--TODO should it receive a state? For now it is not using it
+--returns the value. the type of the number and the state
+evalNumLeaf :: NumNode -> OWLState -> IO (Double, String, OWLState)
+--Evaluates for natural numbers
+evalNumLeaf (NumNat n) state = do return (n, "NumNat", state)
+--Evaluates for integer numbers
+evalNumLeaf (NumInt n) state = do return (n, "NumInt", state)
+--Evaluates for real numbers
+evalNumLeaf (NumReal n) state = do return (n, "NumReal", state)
 
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
