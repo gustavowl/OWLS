@@ -115,8 +115,8 @@ runStatement (WriteCall expr) state1 = do
 	--print state1
 	--print expr --DELETE this line
 	(t, v, state2) <- evalExpr expr state1
-	--print t
-	--print v --DELETE this line
+	print t
+	print v --DELETE this line
 	--print state2
 	return (state2, Continue)
 
@@ -236,15 +236,14 @@ evalNumExpr node state = do
 	-- TODO evaluate for other expressions (recursion)
 	return (val, typ, state)
 
---TODO should it receive a state? For now it is not using it
 --returns the value. the type of the number and the state
 evalNumLeaf :: NumNode -> OWLState -> IO (Double, String, OWLState)
 --Evaluates for natural numbers
-evalNumLeaf (NumNat n) state = do return (n, "NumNat", state)
+evalNumLeaf (NumNat n) state = do return (n, "nat", state)
 --Evaluates for integer numbers
-evalNumLeaf (NumInt n) state = do return (n, "NumInt", state)
+evalNumLeaf (NumInt n) state = do return (n, "int", state)
 --Evaluates for real numbers
-evalNumLeaf (NumReal n) state = do return (n, "NumReal", state)
+evalNumLeaf (NumReal n) state = do return (n, "real", state)
 
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
