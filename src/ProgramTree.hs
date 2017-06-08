@@ -18,14 +18,15 @@ data Declaration = Var String VarType (Maybe Expr)
 data Statement = VarDec Declaration
 	| FuncDec Declaration
 	| ProcDec Declaration
-	| Assignment String Expr
-	| If Expr [Statement] [Statement]
 	| FuncRet Expr
 	| ProcRet
-	| While Expr [Statement]
-	| For Declaration Expr Expr [Statement]
 	| ProcCall String [Expr]
 	| WriteCall Expr
+	| Assignment String Expr
+	| If Expr [Statement] [Statement]
+	| While Expr [Statement]
+	| For Declaration Expr Statement [Statement]
+	| Break
 
 	deriving (Eq,Show)
 	-- TODO: mais coisa
@@ -33,7 +34,6 @@ data Statement = VarDec Declaration
 data Expr = BoolExpr BoolNode 
 	| NumExpr NumNode 
 	| StuffExpr StuffNode
-	| StuffArray NumNode
 	deriving (Eq,Show)
 
 data BoolNode = BoolLit Bool
@@ -67,7 +67,7 @@ data NumNode = NumNat Double
 
 data StuffNode = StuffID String
 	| StuffChar Char
-	| StuffArrayString String
+	| StuffArray [Expr]
 	| StuffFuncCall String [Expr]
 	| StuffReadCall Expr
 	deriving (Eq,Show)

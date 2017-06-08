@@ -41,10 +41,6 @@ callFunction name args retType state1 = do
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state2
 	runFuncBody name body retType state3 >>= return
-	-- TODO:
-	-- 1) Pegar informações da função na tabela de símbolos a partir do nome dela
-	-- 2) Pegar o parentID dessa função
-	-- 3) Adicionar novo escopo na pilha de escopos, passando o parentID como parâmetro
 
 callProcedure :: String -> [Expr] -> OWLState -> IO OWLState
 callProcedure name args state1 = do
@@ -101,16 +97,34 @@ runProcBody name (s:stmts) state1 = do
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
+-- Declarations.
+runStatement (VarDec dec) state1 = do 
+	state2 <- addDec dec state1
+	return (state2, Continue)
+runStatement (FuncDec dec) state1 = do 
+	state2 <- addDec dec state1
+	return (state2, Continue)
+runStatement (ProcDec dec) state1 = do 
+	state2 <- addDec dec state1
+	return (state2, Continue)
+
 -- Return statements.
 runStatement (ProcRet) state = do
 	return (state, Finish)
 runStatement (FuncRet expr) state = do
 	return (state, Return expr) 
-	
--- General statements.
-runStatement (VarDec dec) state1 = do 
-	state2 <- addDec dec state1
-	return (state2, Continue)
+
+-- Control flow. (TODO)
+runStatement (If expr ifbody elsebody) state = do
+	return (state, Continue)
+runStatement (While expr body) state = do
+	return (state, Continue)
+runStatement (For ini expr incr body) state = do
+	return (state, Continue)
+
+-- General statements. (TODO)
+runStatement (ProcCall name params) state = do
+	return (state, Continue)
 runStatement (WriteCall expr) state1 = do 
 	--print state1
 	--print expr --DELETE this line
@@ -119,24 +133,9 @@ runStatement (WriteCall expr) state1 = do
 	--print v --DELETE this line
 	--print state2
 	return (state2, Continue)
-
-runStatement (FuncDec dec) state = do
-	return (state, Continue)
-runStatement (ProcDec dec) state = do
-	return (state, Continue)
 runStatement (Assignment name assign) state = do
 	return (state, Continue)
-runStatement (If expr ifbody elsebody) state = do
-	return (state, Continue)
-runStatement (While expr body) state = do
-	return (state, Continue)
-runStatement (For ini expr loopExpr body) state = do
-	return (state, Continue)
-runStatement (ProcCall name params) state = do
-	return (state, Continue)
-	-- TODO: é pra calcular a expr, comparar o tipo resultante dela com o t e retornar 
-	-- o valor dela no lugar no Nothing
-
+	
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression
 ---------------------------------------------------------------------------------------------------
@@ -245,6 +244,8 @@ evalNumLeaf (NumNat n) state = do return (n, "NumNat", state)
 evalNumLeaf (NumInt n) state = do return (n, "NumInt", state)
 --Evaluates for real numbers
 evalNumLeaf (NumReal n) state = do return (n, "NumReal", state)
+
+evalNumLeaf _ state = do return (0, "só pro Haskell não frescar", state)
 
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do

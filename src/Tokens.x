@@ -86,6 +86,7 @@ tokens :-
   break                                { \p s -> newToken p Break}
   read                                 { \p s -> newToken p Read}
   write                                { \p s -> newToken p Write}
+  const                                { \p s -> newToken p Const}
   $digit+                              { \p s -> newToken p (Nat (read s))}
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
@@ -142,6 +143,7 @@ data TokenSymbol =
   Case   |
   Return |
   Break  |
+  Const |
   Bool Bool |
   Id String |
   Nat Double |

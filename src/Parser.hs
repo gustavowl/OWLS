@@ -76,7 +76,7 @@ parseParamDec :: OWLParser Declaration
 parseParamDec = do
 	name <- identifier
 	colon
-	t <- parseVarType <|> parseFuncType <|> parseProcType
+	t <- parseVarType
 	return $ Var name t Nothing
 
 parseInitialValue :: OWLParser Expr
@@ -94,16 +94,22 @@ parseBlock :: OWLParser [Statement]
 parseBlock = braces $ many parseStatement
 
 parseStatement :: OWLParser Statement
-parseStatement = (try parseProcRet)
-	<|> (try parseFuncRet)
-	<|> (try parseDecStatement) 
-	<|> (try parseAssignment)
+parseStatement = (try parseDecStatement) 
+	<|> (try $ parseSemi parseProcCall)
+	<|> (try $ parseSemi parseWriteCall)
+	<|> (try $ parseSemi parseProcRet)
+	<|> (try $ parseSemi parseFuncRet)
+	<|> (try $ parseSemi parseAssignment)
 	<|> (try parseCondition)
-	<|> (try parseProcCall)
-	<|> (try parseWriteCall)
 	<|> (try parseWhile)
 	<|> (try parseFor)
 	-- TODO: other statement types
+
+parseSemi :: OWLParser Statement -> OWLParser Statement
+parseSemi parser = do
+	s <- try parser
+	semi
+	return s
 
 parseDecStatement :: OWLParser Statement
 parseDecStatement = do
@@ -112,17 +118,27 @@ parseDecStatement = do
 		f (Function n p r b) = return $ FuncDec (Function n p r b)
 		f (Procedure n p b) = return $ ProcDec (Procedure n p b)
 
+parseProcCall :: OWLParser Statement
+parseProcCall = do
+	name <- identifier
+	args <- parens (sepBy parseExpr comma)
+	return $ ProcCall name args
+
+parseWriteCall :: OWLParser Statement
+parseWriteCall = do
+	writeToken
+	arg <- parens parseExpr
+	return $ WriteCall arg
+
 parseProcRet :: OWLParser Statement
 parseProcRet = do
 	returnToken
-	semi
 	return ProcRet
 
 parseFuncRet :: OWLParser Statement
 parseFuncRet = do
 	returnToken
 	expr <- parseExpr
-	semi
 	return $ FuncRet expr
 
 parseAssignment :: OWLParser Statement
@@ -130,7 +146,6 @@ parseAssignment = do
 	name <- identifier
 	assignToken
 	expr <- parseExpr
-	semi
 	return $ Assignment name expr
 
 parseCondition :: OWLParser Statement
@@ -151,26 +166,10 @@ parseEmptyElse :: OWLParser [Statement]
 parseEmptyElse = do
 	return []
 
-parseProcCall :: OWLParser Statement
-parseProcCall = do
-	name <- identifier
-	args <- parens (sepBy parseExpr comma)
-	semi
-	return $ ProcCall name args
-
-parseWriteCall :: OWLParser Statement
-parseWriteCall = do
-	writeToken
-	arg <- parens parseExpr
-	semi
-	return $ WriteCall arg
-
 parseWhile :: OWLParser Statement
 parseWhile = do
 	whileToken
-	lparen
-	expr <- parseBoolExpr
-	rparen
+	expr <- parens parseBoolExpr
 	body <- parseBlock
 	return $ While expr body
 
@@ -178,10 +177,24 @@ parseFor :: OWLParser Statement
 parseFor = do
 	forToken
 	lparen
-	ini <- parseDeclaration
+	ini <- parseForInit
 	semi
 	expr <- parseBoolExpr
 	semi
-	loopExpr <- parseExpr
+	incr <- parseAssignment
+	rparen
 	body <- parseBlock
-	return $ For ini expr loopExpr body
+	return $ For ini expr incr body
+
+parseForInit :: OWLParser Declaration
+parseForInit = do
+	name <- identifier
+	colon
+	t <- parseVarType
+	v <- parseInitialValue
+	return $ Var name t $ Just v
+
+parseBreak :: OWLParser Statement
+parseBreak = do
+	breakToken
+	return Break

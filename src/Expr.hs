@@ -263,17 +263,17 @@ parseStuffArray = parseStuffGenericArray <|> parseStuffString
 
 parseStuffGenericArray :: OWLParser StuffNode
 parseStuffGenericArray = do
-	s <- sstring
-	return $ StuffArrayString s
+	-- TODO: ler uma array genérica com expressões dentro assim como está no bla2 de example.owls
+	return $ StuffArray []
 
 parseStuffString :: OWLParser StuffNode
 parseStuffString = do
 	s <- sstring
-	return $ StuffArrayString $ convertToChar s
+	return $ StuffArray $ stringToArray s
 
-convertToChar :: String -> String  
-convertToChar [] = []  
-convertToChar (x:xs) =  "(StuffChar '" ++ [x] ++ "')" ++ convertToChar xs
+stringToArray :: String -> [Expr]  
+stringToArray [] = []  
+stringToArray (x:xs) = (StuffExpr (StuffChar x)) : stringToArray xs
 
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do

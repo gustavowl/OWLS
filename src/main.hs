@@ -12,4 +12,6 @@ parseProgram :: String -> IO()
 parseProgram input = case 
 	Parser.parseOWLS input of
 		Left error -> print error
-		Right program -> Interpreter.runProgram program
+		Right program -> do
+			print program
+			Interpreter.runProgram program

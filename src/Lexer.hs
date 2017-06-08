@@ -57,6 +57,12 @@ forToken = tokenPrim show updatePos (simpleGetToken For)
 returnToken :: TokenParser
 returnToken = tokenPrim show updatePos (simpleGetToken Return)
 
+breakToken :: TokenParser
+breakToken = tokenPrim show updatePos (simpleGetToken Break)
+
+constToken :: TokenParser
+constToken = tokenPrim show updatePos (simpleGetToken Const)
+
 ---------------------------------------------------------------------------------------------------
 -- Characters / symbols
 ---------------------------------------------------------------------------------------------------
