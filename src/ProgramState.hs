@@ -105,8 +105,27 @@ addVarDec name varType ([(a, b, table)], types) = let
 	newElement = (name, varType, getInitValue varType) in
 	([(a, b, newElement:table)], types)
 
+updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry] 
+updateTableEntry v name [] = []
+updateTableEntry newValue name ((name', t, v):table) = 
+	if name == name' then
+		updateTableEntry newValue name ((name, t, newValue):table)
+	else 
+		(name', t, v) : (updateTableEntry newValue name table)
+
+updateScope :: VarValue -> Key -> Scope -> Scope
+updateScope v (name, scope) (current, b, table) = 
+	if current == scope then 
+		(current, b, updateTableEntry v name table)
+	else 
+		(current, b, table)
+
+updateVarScopes :: VarValue -> Key -> [Scope] -> [Scope]
+updateVarScopes _ _ [] = []
+updateVarScopes v k (h:scopes) = (updateScope v k h) : (updateVarScopes v k scopes)
+
 updateVar :: VarValue -> Key -> OWLState -> OWLState
-updateVar value key state = state
+updateVar value key (scopes, userTypes) = ((updateVarScopes value key scopes), userTypes)
 
 getVar :: Key -> OWLState -> (VarType, VarValue)
 getVar (name, scopeID) state = let

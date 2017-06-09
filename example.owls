@@ -18,7 +18,7 @@ x : int = 1;
 
 main() {
 	a : int = 10;
-	# x = "12";
+	x = 12;
 	# b : char = x[1];
 	write(a);
 	# while (a > 0) {
