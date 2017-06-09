@@ -7,8 +7,8 @@ import ProgramState
 import Expr --needed for getting leaf nodes values
 
 runProgram :: Program -> IO()
-runProgram (decs, main) = do
-	state <- addGlobalDecs decs initState
+runProgram (types, decs, main) = do
+	state <- addGlobalDecs decs (initState types)
 	i <- callMain getMainArgs main state
 	print i
 

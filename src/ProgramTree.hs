@@ -7,13 +7,15 @@ import Text.Parsec.Combinator
 import Text.Show.Functions
 import Tokens
 
--- (Lista de declarações de variáveis/funções/procedimentos, main)
-type Program = ([Declaration], Declaration)
+-- (Lista de tipos/structs, Lista de declarações de variáveis/funções/procedimentos, main)
+type Program = ([UserType], [Declaration], Declaration)
 
 data Declaration = Var String VarType (Maybe Expr)
 	| Function String [Declaration] VarType [Statement]
 	| Procedure String [Declaration] [Statement]
 	deriving (Eq,Show)
+
+type UserType = (String, [Declaration])
 
 data Statement = VarDec Declaration
 	| FuncDec Declaration
@@ -39,6 +41,8 @@ data BoolNode = BoolLit Bool
 	| BoolID String 
 	| BoolEl StuffNode NumNode
 	| BoolFuncCall String [Expr] 
+	| BoolField StuffNode String
+	| BoolPtr StuffNode
 	| BoolNot BoolNode
 	| BoolAnd BoolNode BoolNode
 	| BoolOr BoolNode BoolNode
@@ -58,6 +62,8 @@ data NumNode = NumNat Double
 	| NumID String
 	| NumEl StuffNode NumNode
 	| NumFuncCall String [Expr]
+	| NumField StuffNode String
+	| NumPtr StuffNode
 	| NumMinus NumNode
 	| NumAdd NumNode NumNode
 	| NumSub NumNode NumNode
@@ -70,8 +76,10 @@ data StuffNode = StuffID String
 	| StuffEl StuffNode NumNode
 	| StuffChar Char
 	| StuffArray [Expr]
+	| StuffPtr StuffNode
+	| StuffField StuffNode String
 	| StuffFuncCall String [Expr]
-	| StuffReadCall Expr
+	| StuffReadCall
 	deriving (Eq,Show)
 
 data VarType = AtomicType String 

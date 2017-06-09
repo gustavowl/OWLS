@@ -15,8 +15,6 @@ type Scope = (Integer, Integer, [TableEntry])
 -- Nome, Tipo, Valor
 type TableEntry = (String, VarType, VarValue)
 
-type UserType = ()
-
 ---------------------------------------------------------------------------------------------------
 -- Values
 ---------------------------------------------------------------------------------------------------
@@ -240,8 +238,8 @@ hasCompatibleType v1 v2 = False -- TODO: inserir demais tipos
 ---------------------------------------------------------------------------------------------------
 
 -- Apenas o escopo global, vazio.
-initState :: OWLState
-initState = ([(0, -1, [])], [])
+initState :: [UserType] -> OWLState
+initState types = ([(0, -1, [])], types)
 
 getInitValue :: VarType -> VarValue
 getInitValue (AtomicType "nat") = NumberValue 0

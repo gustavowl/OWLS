@@ -11,9 +11,9 @@ import qualified Tokens
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: OWLParser Expr
-parseExpr = (try parseNumExpr) 
+parseExpr = (try parseNumExpr)
 	<|> (try parseBoolExpr) 
-	<|> parseStuffExpr
+	<|> parseStuffExpr 
 
 ---------------------------------------------------------------------------------------------------
 -- Numeric Expr
@@ -30,10 +30,12 @@ parseNumNode = parseAddChain
 parseNumLeaf :: OWLParser NumNode
 parseNumLeaf = (try parseNumUnary)
 	<|> (try parseNumber)
-	<|> (try (parens parseNumNode))
 	<|> (try parseNumFuncCall)
 	<|> (try parseNumEl)
-	<|> parseNumID
+	<|> (try parseNumPtr)
+	<|> (try parseNumField)
+	<|> (try parseNumID)
+	<|> (parens parseNumNode)
 
 ---------------------------------------------------------------------------------------------------
 -- Numeric Leaf Terms
@@ -49,10 +51,20 @@ parseNumEl = do
 	(array, size) <- parseArrayEl
 	return $ NumEl array size
 
+parseNumPtr :: OWLParser NumNode
+parseNumPtr = do
+	ptr <- parsePtrContent
+	return $ NumPtr ptr
+
+parseNumField :: OWLParser NumNode
+parseNumField = do
+	(node, field) <- parseField
+	return $ NumField node field
+
 parseNumFuncCall :: OWLParser NumNode
 parseNumFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ NumFuncCall name args
+	(func, args) <- parseFuncCall
+	return $ NumFuncCall func args
 
 ---------------------------------------------------------------------------------------------------
 -- Numeric Literal Leaf Terms
@@ -136,19 +148,25 @@ parseBoolNode = parseOrChain
 parseBoolLeaf :: OWLParser BoolNode
 parseBoolLeaf = (try parseBoolUnary)
 	<|> (try parseBoolean)
-	<|> (try (parens parseBoolNode))
 	<|> (try parseBoolFuncCall)
 	<|> (try parseBoolEl)
-	<|> parseBoolID
+	<|> (try parseBoolPtr)
+	<|> (try parseBoolField)
+	<|> (try parseBoolID)
+	<|> (parens parseBoolNode)
 
 ---------------------------------------------------------------------------------------------------
--- Boolean Leaf Terms
+-- Boolean Literal
 ---------------------------------------------------------------------------------------------------
 
 parseBoolean :: OWLParser BoolNode
 parseBoolean = do
 	b <- boolean
 	return $ BoolLit b
+
+---------------------------------------------------------------------------------------------------
+-- Boolean Leaf Terms
+---------------------------------------------------------------------------------------------------
 
 parseBoolID :: OWLParser BoolNode
 parseBoolID = do
@@ -160,10 +178,20 @@ parseBoolEl = do
 	(array, size) <- parseArrayEl
 	return $ BoolEl array size
 
+parseBoolPtr :: OWLParser BoolNode
+parseBoolPtr = do
+	ptr <- parsePtrContent
+	return $ BoolPtr ptr
+
+parseBoolField :: OWLParser BoolNode
+parseBoolField = do
+	(node, field) <- parseField
+	return $ BoolField node field
+
 parseBoolFuncCall :: OWLParser BoolNode
 parseBoolFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ BoolFuncCall name args
+	(func, args) <- parseFuncCall
+	return $ BoolFuncCall func args
 
 ---------------------------------------------------------------------------------------------------
 -- Boolean Unary Operators
@@ -239,27 +267,22 @@ parseRelationalTail = do
 
 parseStuffExpr :: OWLParser Expr
 parseStuffExpr = do
-	expr <- parseStuffNode
+	expr <- try parseStuffNode
 	return $ StuffExpr expr
 
 parseStuffNode :: OWLParser StuffNode
-parseStuffNode = (try parseStuffFuncCall) 
-	<|> (try parseReadCall) 
-	<|> (try parseStuffID) 
+parseStuffNode = (try parseReadCall)
+	<|> (try parseStuffFuncCall) 
+	<|> (try parseStuffEl)
 	<|> (try parseStuffChar)
 	<|> (try parseStuffArray)
---	<|> (try parseStuffEl)
-	<|> parseStuffString
+	<|> (try parseStuffString)
+	<|> (try parseStuffID) 
+	<|> (parens parseStuffNode)
 
-parseStuffID :: OWLParser StuffNode
-parseStuffID = do
-	name <- identifier
-	return $ StuffID name
-
-parseStuffEl :: OWLParser StuffNode
-parseStuffEl = do
-	(array, size) <- parseArrayEl
-	return $ StuffEl array size
+---------------------------------------------------------------------------------------------------
+-- Stuff Literals
+---------------------------------------------------------------------------------------------------
 
 parseStuffChar :: OWLParser StuffNode
 parseStuffChar = do
@@ -280,16 +303,41 @@ stringToArray :: String -> [Expr]
 stringToArray [] = []  
 stringToArray (x:xs) = (StuffExpr (StuffChar x)) : stringToArray xs
 
+---------------------------------------------------------------------------------------------------
+-- Stuff Leaf Terms
+---------------------------------------------------------------------------------------------------
+
+parseStuffID :: OWLParser StuffNode
+parseStuffID = do
+	name <- identifier
+	return $ StuffID name
+
+parseStuffEl :: OWLParser StuffNode
+parseStuffEl = do
+	(array, size) <- parseArrayEl
+	return $ StuffEl array size
+
+parseStuffPtr :: OWLParser StuffNode
+parseStuffPtr = do
+	ptr <- parsePtrContent
+	return $ StuffPtr ptr
+
+parseStuffField :: OWLParser StuffNode
+parseStuffField = do
+	(node, name) <- parseField
+	return $ StuffField node name
+
 parseStuffFuncCall :: OWLParser StuffNode
 parseStuffFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ StuffFuncCall name args
+	(func, args) <- parseFuncCall
+	return $ StuffFuncCall func args
 
 parseReadCall :: OWLParser StuffNode
 parseReadCall = do
 	readToken
-	arg <- parens parseExpr
-	return $ StuffReadCall arg
+	lparen
+	rparen
+	return $ StuffReadCall
 
 ---------------------------------------------------------------------------------------------------
 -- General Operators
@@ -297,12 +345,25 @@ parseReadCall = do
 
 parseFuncCall :: OWLParser (String, [Expr])
 parseFuncCall = do
-	id <- identifier
+	func <- identifier
 	args <- parens $ sepBy parseExpr comma
-	return (id, args)
+	return (func, args)
 
 parseArrayEl :: OWLParser (StuffNode, NumNode)
 parseArrayEl = do
-	array <- parseStuffNode
+	array <- parseStuffID <|> (parens parseStuffNode)
 	size <- brackets parseNumNode
 	return (array, size)
+
+parseField :: OWLParser (StuffNode, String)
+parseField = do
+	struct <- parseStuffID <|> (parens parseStuffNode)
+	dotToken
+	field <- identifier
+	return (struct, field)
+
+parsePtrContent :: OWLParser StuffNode
+parsePtrContent = do
+	atToken
+	ptr <- parseStuffID <|> (parens parseStuffNode)
+	return ptr

@@ -19,9 +19,10 @@ parseOWLS input = runParser parseProgram () "" (T.getTokens input)
 
 parseProgram :: OWLParser Program
 parseProgram = do
-	dec <- many parseDeclaration
+	types <- many parseUserType
+	decs <- many parseDeclaration
 	main <- parseMain
-	return (dec, main)
+	return (types, decs, main)
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
@@ -84,6 +85,13 @@ parseInitialValue = do
 	assignToken
 	expr <- parseExpr
 	return expr
+
+parseUserType :: OWLParser UserType
+parseUserType = do
+	structToken
+	name <- identifier
+	fields <- braces (many parseVarDec)
+	return (name, fields)
 
 ---------------------------------------------------------------------------------------------------
 -- Statements

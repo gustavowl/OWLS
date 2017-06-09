@@ -14,7 +14,7 @@ type CharParser = P.OWLParser Char
 type StringParser = P.OWLParser String
 
 ---------------------------------------------------------------------------------------------------
--- Program key words
+-- Declaration key words
 ---------------------------------------------------------------------------------------------------
 
 mainToken :: TokenParser
@@ -26,11 +26,11 @@ funcToken = tokenPrim show updatePos (simpleGetToken Func)
 procToken :: TokenParser
 procToken = tokenPrim show updatePos (simpleGetToken Proc)
 
-readToken :: TokenParser
-readToken = tokenPrim show updatePos (simpleGetToken Read)
+constToken :: TokenParser
+constToken = tokenPrim show updatePos (simpleGetToken Const)
 
-writeToken :: TokenParser
-writeToken = tokenPrim show updatePos (simpleGetToken Write)
+structToken :: TokenParser
+structToken = tokenPrim show updatePos (simpleGetToken Struct)
 
 ---------------------------------------------------------------------------------------------------
 -- Statement key words
@@ -60,8 +60,11 @@ returnToken = tokenPrim show updatePos (simpleGetToken Return)
 breakToken :: TokenParser
 breakToken = tokenPrim show updatePos (simpleGetToken Break)
 
-constToken :: TokenParser
-constToken = tokenPrim show updatePos (simpleGetToken Const)
+readToken :: TokenParser
+readToken = tokenPrim show updatePos (simpleGetToken Read)
+
+writeToken :: TokenParser
+writeToken = tokenPrim show updatePos (simpleGetToken Write)
 
 ---------------------------------------------------------------------------------------------------
 -- Characters / symbols
@@ -115,7 +118,6 @@ brackets p = do
 	rbracket
 	return $ s
 
-
 ---------------------------------------------------------------------------------------------------
 -- Operators
 ---------------------------------------------------------------------------------------------------
@@ -152,6 +154,9 @@ candToken = tokenPrim show updatePos (simpleGetToken And_cir)
 
 corToken :: TokenParser
 corToken = tokenPrim show updatePos (simpleGetToken Or_cir)
+
+dotToken :: TokenParser
+dotToken = tokenPrim show updatePos (simpleGetToken Dot)
 
 atToken :: TokenParser
 atToken = tokenPrim show updatePos (simpleGetToken At)
