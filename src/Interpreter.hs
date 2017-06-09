@@ -86,8 +86,16 @@ runFuncBody name (s:stmts) expectedType state1 = do
 			if checkType exprType expectedType then 
 				return (state3, value)
 			else
-				fail "WTF"
+				fail $ "Error in type consistency. Expected  " ++ errorType expectedType ++ " current type " ++ errorType exprType ++ " ."
+				--fail $ "Error in type consistency. Expected " ++ expectedType ++ " current." 
 		f _ = fail "WTF"
+
+-- Verificar melhor posicao para adicionar
+errorType :: VarType -> String
+errorType (AtomicType "nat") = "nat"
+errorType (AtomicType "int") = "int"
+errorType (AtomicType "real") = "real"
+errorType (AtomicType "char") = "char"
 
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
 runProcBody name [] state = do return state
@@ -387,14 +395,16 @@ addDec (Procedure name params body) state = do
 -- ordem dos argumentos: tipo da variável; tipo esperado da variável
 checkType :: VarType -> VarType -> Bool
 checkType (AtomicType "nat") (AtomicType "nat") = True
-checkType (AtomicType "int") (AtomicType "int") = True
-checkType (AtomicType "real") (AtomicType "real") = True
 checkType (AtomicType "nat") (AtomicType "int") = True
-checkType (AtomicType "int") (AtomicType "real") = True 
 checkType (AtomicType "nat") (AtomicType "real") = True
+checkType (AtomicType "int") (AtomicType "int") = True
+checkType (AtomicType "int") (AtomicType "real") = True 
+checkType (AtomicType "real") (AtomicType "real") = True
 checkType (AtomicType "bool") (AtomicType "bool") = True
 checkType (AtomicType "char") (AtomicType "char") = True
 checkType (AtomicType "char") (AtomicType "nat") = True
+checkType (AtomicType "char") (AtomicType "int") = True
+checkType (AtomicType "char") (AtomicType "NumReal") = True
 checkType v1 v2 = False -- TODO: inserir demais tipos
 
 printValue :: VarValue -> IO()
