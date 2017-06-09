@@ -20,7 +20,7 @@ main() {
 	a : int = 10;
 	x = 12;
 	# b : char = x[1];
-	write(a);
+	# write(a);
 	# while (a > 0) {
 	#	a = a - 1;
 	#}

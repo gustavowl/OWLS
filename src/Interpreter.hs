@@ -26,6 +26,7 @@ callMain :: [Expr] -> Declaration -> OWLState -> IO Integer
 callMain args (Function name params ret body) state1 = do
 	state2 <- addParameters args params state1
 	(state3, v) <- runFuncBody name body ret state2
+	print state3
 	let ret = f v where
 		f (NumberValue n) = round n
 		f _ = 0

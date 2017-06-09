@@ -109,7 +109,7 @@ updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry]
 updateTableEntry v name [] = []
 updateTableEntry newValue name ((name', t, v):table) = 
 	if name == name' then
-		updateTableEntry newValue name ((name, t, newValue):table)
+		(name, t, newValue) : updateTableEntry newValue name (table)
 	else 
 		(name', t, v) : (updateTableEntry newValue name table)
 
