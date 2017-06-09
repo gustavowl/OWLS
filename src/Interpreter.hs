@@ -129,7 +129,17 @@ runIfElseBody (s:stmts) state = do
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
 		f (state1, Continue) = (runIfElseBody stmts state1)
-		f _ = fail "WTF"
+		f _ = fail "WTF runIfElseBody"
+
+runWhileBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+--when finishes running while loop; try running it again
+runWhileBody [] state = do return (state, Continue) 
+runWhileBody (s:stmts) state = do --executes next statement
+	runStatement s state >>= f where
+		f (state1, Return expr) = do return (state1, Return expr)
+		f (state1, Continue) = (runWhileBody stmts state1)
+	--TODO stop when break
+
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
@@ -158,8 +168,24 @@ runStatement (If expr ifbody elsebody) state1 = do
 	else
 		runIfElseBody elsebody state2
 
-runStatement (While expr body) state = do
-	return (state, Continue)
+runStatement (While expr body) state1 = do
+	(varType, varValue, state2) <- evalExpr expr state1
+	--verifies if type is valid. convertType will throw an error otherwise
+	convertType (AtomicType "bool") varType
+	if varValue == BoolValue True then do
+		runWhileBody body state2 >>= f where
+			f (state3, Continue) = do return (state3, Continue)
+			f _ = do return (state1, Continue)
+
+	else do
+		--finish loop
+		return (state1, Continue)
+
+	--else just do nothing. will stop running
+
+	--f (state3, a) = do return (state3, Continue) --End of while
+	--f (state3, Continue) = (runStatement (While expr body) state3) --do recursion (one more iteration)
+
 runStatement (For ini expr incr body) state = do
 	return (state, Continue)
 

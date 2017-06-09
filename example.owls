@@ -45,8 +45,11 @@ main() {
 		x = bla() + 17 + bla();
 		write(x);
 		ble();
-		return 10;
 	} else {
-		return 10 + 50 * 2 - 5;
+		write(a);
 	}
+	while (true) {
+		x = 1;
+	}
+	return 93;
 }
