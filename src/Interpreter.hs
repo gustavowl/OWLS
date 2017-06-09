@@ -97,6 +97,14 @@ runProcBody name (s:stmts) state1 = do
 		f (state2, Finish) = do return state2
 		f _ = fail "WTF"
 
+runIfElseBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+runIfElseBody [] state = do return (state, Continue)
+runIfElseBody (s:stmts) state = do 
+	runStatement s state >>= f where
+		f (state1, Return expr) = do return (state1, Return expr)
+		f (state1, Continue) = (runIfElseBody stmts state1)
+		f _ = fail "WTF"
+
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
 -- Declarations.
@@ -116,9 +124,16 @@ runStatement (ProcRet) state = do
 runStatement (FuncRet expr) state = do
 	return (state, Return expr) 
 
--- Control flow. (TODO)
-runStatement (If expr ifbody elsebody) state = do
-	return (state, Continue)
+runStatement (If expr ifbody elsebody) state1 = do
+	(varType, varValue, state2) <- evalExpr expr state1
+	if checkType varType (AtomicType "bool") then
+		if varValue == BoolValue True then
+			runIfElseBody ifbody state2
+		else
+			runIfElseBody elsebody state2
+	else
+		fail "Type error: expr must be bool."
+
 runStatement (While expr body) state = do
 	return (state, Continue)
 runStatement (For ini expr incr body) state = do
@@ -131,8 +146,13 @@ runStatement (WriteCall expr) state1 = do
 	(t, v, state2) <- evalExpr expr state1
 	print v --TODO stop printing VarType and only print value (e.g. NumberValue)
 	return (state2, Continue)
-runStatement (Assignment name assign) state = do
-	return (state, Continue)
+runStatement (Assignment name assign) state1 = do
+	scope <- getScopeID name state1
+	(varTypeAssign, _) <- getVar (name, scope) state1
+	(varType, value, state2) <- evalExpr assign state1
+	-- TODO verificar tipo varType x varTypeAssign 
+	state3 <- updateVar value (name, scope) state2
+	return (state3, Continue)
 	
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression
