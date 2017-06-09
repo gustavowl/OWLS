@@ -52,8 +52,23 @@ callProcedure (name, scopeID) args state1 = do
 	runProcBody name body state3 >>= return
 
 addParameters :: [Expr] -> [Declaration] -> OWLState -> IO OWLState
-addParameters args params state = do return state 
--- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
+addParameters [] [] state = do return state
+addParameters (a:args) ((Var name t1 expr):params) state1 = do 
+	(t2, v, state2) <- evalExpr a state1
+	convertType t1 t2
+	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
+	return state2 
+addParameters (a:args) ((Function name p ret body):params) state1 = do 
+	(t, v, state2) <- evalExpr a state1
+	convertType t (FuncType (extractParamTypes p) ret)
+	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
+	return state2 
+addParameters (a:args) ((Procedure name p body):params) state1 = do 
+	(t, v, state2) <- evalExpr a state1
+	convertType t (ProcType (extractParamTypes p))
+	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
+	return state2 
+
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
