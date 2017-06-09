@@ -101,9 +101,10 @@ isInScope name ((varName, _, _):t) =
 ---------------------------------------------------------------------------------------------------
 
 addVarDec :: String -> VarType -> OWLState -> OWLState
-addVarDec name varType ([(a, b, table)], types) = let
+addVarDec name varType ([], types) = ([], types)
+addVarDec name varType ((a, b, table):scopes, types) = let
 	newElement = (name, varType, getInitValue varType) in
-	([(a, b, newElement:table)], types)
+	((a, b, newElement:table):scopes, types)
 
 updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry] 
 updateTableEntry v name [] = []
@@ -186,6 +187,50 @@ addLocalDec (Var name t (Just v)) state = state -- TODO
 addLocalDec _ state = state -- TODO
 
 -}
+
+---------------------------------------------------------------------------------------------------
+-- Type Convertion
+---------------------------------------------------------------------------------------------------
+
+getNumberType :: VarType -> IO String
+getNumberType (AtomicType "nat") = do return "nat"
+getNumberType (AtomicType "int") = do return "int"
+getNumberType (AtomicType "real") = do return "real"
+getNumberType a = do fail $ show a ++ "is not a number."
+
+getNumberValue :: VarValue -> IO Double
+getNumberValue (NumberValue n) = do return n
+getNumberValue a = fail "NAN"
+
+getBoolValue :: VarValue -> IO Bool
+getBoolValue (BoolValue v) = do return v
+getBoolValue a = fail "Not a Bool"
+
+-- ExpectedType, ActualType, Final Type
+convertType :: VarType -> VarType -> IO VarType
+convertType (AtomicType "int") (AtomicType "nat") = do return $ AtomicType "int"
+convertType (AtomicType "real") (AtomicType "nat") = do return $ AtomicType "real"
+convertType (AtomicType "real") (AtomicType "int") = do return $ AtomicType "real"
+convertType a b = do 
+	if a == b then
+		return a
+	else
+		fail $ "Could not convert " ++ show b ++ " to " ++ show a ++ "."
+
+-- ordem dos argumentos: tipo da variável; tipo esperado da variável
+hasCompatibleType :: VarType -> VarType -> Bool
+hasCompatibleType (AtomicType "nat") (AtomicType "nat") = True
+hasCompatibleType (AtomicType "nat") (AtomicType "int") = True
+hasCompatibleType (AtomicType "nat") (AtomicType "real") = True
+hasCompatibleType (AtomicType "int") (AtomicType "int") = True
+hasCompatibleType (AtomicType "int") (AtomicType "real") = True 
+hasCompatibleType (AtomicType "real") (AtomicType "real") = True
+hasCompatibleType (AtomicType "bool") (AtomicType "bool") = True
+hasCompatibleType (AtomicType "char") (AtomicType "char") = True
+hasCompatibleType (AtomicType "char") (AtomicType "nat") = True
+hasCompatibleType (AtomicType "char") (AtomicType "int") = True
+hasCompatibleType (AtomicType "char") (AtomicType "NumReal") = True
+hasCompatibleType v1 v2 = False -- TODO: inserir demais tipos
 
 -- TODO
 -- ...

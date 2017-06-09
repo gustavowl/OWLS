@@ -27,7 +27,6 @@ data Statement = VarDec Declaration
 	| While Expr [Statement]
 	| For Declaration Expr Statement [Statement]
 	| Break
-
 	deriving (Eq,Show)
 	-- TODO: mais coisa
 

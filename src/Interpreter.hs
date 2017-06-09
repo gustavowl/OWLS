@@ -1,5 +1,6 @@
 module Interpreter where
 
+import Data.Fixed
 import System.IO
 import ProgramTree
 import ProgramState
@@ -24,9 +25,10 @@ getMainArgs = []
 
 callMain :: [Expr] -> Declaration -> OWLState -> IO Integer
 callMain args (Function name params ret body) state1 = do
-	state2 <- addParameters args params state1
-	(state3, v) <- runFuncBody name body ret state2
-	print state3
+	let state2 = newScope 0 state1
+	state3 <- addParameters args params state2
+	(state4, v) <- runFuncBody name body ret state3
+	print state4
 	let ret = f v where
 		f (NumberValue n) = round n
 		f _ = 0
@@ -73,7 +75,7 @@ getProcInfo name _ _ = do fail $ name ++ " is not a procedure."
 data StatementResult = Finish
 	| Continue
 	| Return Expr
-	| Break
+	| BreakCall
 
 runFuncBody :: String -> [Statement] -> VarType -> OWLState -> IO (OWLState, VarValue)
 runFuncBody name [] retType state = do fail $ "Function " ++ name ++ " reached end with no return."
@@ -83,12 +85,9 @@ runFuncBody name (s:stmts) expectedType state1 = do
 		f (state2, Continue) = runFuncBody name stmts expectedType state2 >>= return
 		f (state2, Return expr) = do 
 			(exprType, value, state3) <- evalExpr expr state2
-			if checkType exprType expectedType then 
-				return (state3, value)
-			else
-				fail $ "Error in type consistency. Expected  " ++ errorType expectedType ++ " current type " ++ errorType exprType ++ " ."
-				--fail $ "Error in type consistency. Expected " ++ expectedType ++ " current." 
-		f _ = fail "WTF"
+			convertType expectedType exprType
+			return (state3, value)
+		f (state2, BreakCall) = fail "Break is not breaking anything."
 
 -- Verificar melhor posicao para adicionar
 errorType :: VarType -> String
@@ -104,7 +103,7 @@ runProcBody name (s:stmts) state1 = do
 		f (state2, Return _) = fail $ "Procedure " ++ name ++ " must not return a value."
 		f (state2, Continue) = runProcBody name stmts state2 >>= return
 		f (state2, Finish) = do return state2
-		f _ = fail "WTF"
+		f (state2, BreakCall) = fail "Break is not breaking anything."
 
 runIfElseBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
 runIfElseBody [] state = do return (state, Continue)
@@ -135,13 +134,11 @@ runStatement (FuncRet expr) state = do
 
 runStatement (If expr ifbody elsebody) state1 = do
 	(varType, varValue, state2) <- evalExpr expr state1
-	if checkType varType (AtomicType "bool") then
-		if varValue == BoolValue True then
-			runIfElseBody ifbody state2
-		else
-			runIfElseBody elsebody state2
+	convertType (AtomicType "bool") varType
+	if varValue == BoolValue True then
+		runIfElseBody ifbody state2
 	else
-		fail "Type error: expr must be bool."
+		runIfElseBody elsebody state2
 
 runStatement (While expr body) state = do
 	return (state, Continue)
@@ -155,8 +152,6 @@ runStatement (WriteCall expr) state1 = do
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
-
-
 runStatement (Assignment name assign) state1 = do -- minha versão está dando erro de tipo
 	let scope = getScopeID name state1
 	let (varTypeAssign, _) = getVar (name, scope) state1
@@ -164,22 +159,35 @@ runStatement (Assignment name assign) state1 = do -- minha versão está dando e
 	-- TODO verificar tipo varType x varTypeAssign 
 	let state3 = updateVar value (name, scope) state2
 	return (state3, Continue)
-{-
-runStatement (Assignment name assign) state1 = do
-	print "BEGIN ASSIGNMENT" --TODO delete this line (used for debugging)
-	--print name
-	--print assign
-	--print state
-	(_, e, state2) <- evalExpr assign state1
-	print e
-	--let state2 = ([(a,b,[(c,d,e)])], f)
-	--print state2
-	print "END ASSIGNMENT"
-	return (state2, Continue)
 
-runStatement (Assignment name assign) state = do
-	return (state, Continue)	
--}
+printValue :: VarValue -> IO()
+printValue (BoolValue b) = do
+	print b
+printValue (CharValue c) = do
+	print c
+printValue (NumberValue d) = do
+	print d
+printValue v = do
+	print v
+
+---------------------------------------------------------------------------------------------------
+-- Declarations
+---------------------------------------------------------------------------------------------------
+
+addDec :: Declaration -> OWLState -> IO OWLState
+addDec (Var name varType Nothing) state = do return $ addVarDec name varType state
+addDec (Var name varType (Just e)) state1 = do 
+	(actualType, value, state2) <- evalExpr e state1
+	convertType varType actualType
+	let state3 = addVarDec name varType state2
+	let scopeID = getScopeID name state3
+	return $ updateVar value (name, scopeID) state3
+
+addDec (Function name params ret body) state = do
+	return $ addFuncDec name params ret body state
+addDec (Procedure name params body) state = do
+	return $ addProcDec name params body state
+
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression
 ---------------------------------------------------------------------------------------------------
@@ -196,25 +204,32 @@ evalExpr (NumExpr node) state1 = do
 
 evalExpr (StuffExpr node) state = evalStuffExpr node state
 
+---------------------------------------------------------------------------------------------------
+-- Evaluate Boolean Expression
+---------------------------------------------------------------------------------------------------
+
 evalBoolExpr :: BoolNode -> OWLState -> IO (Bool, OWLState)
+
+-- Boolean literal.
 evalBoolExpr (BoolLit b) state = do return (b, state)
+
+-- Boolean variable.
 evalBoolExpr (BoolID name) state = do
 	let scopeID = getScopeID name state
 	let (t, v) = getVar (name, scopeID) state
-	if t == AtomicType "bool" then do
-		let b = f v where
-			f (BoolValue b) = b
-			f _ = False
-		return (b, state) 
-	else
-		fail $ "Variable " ++ name ++ " is not a boolean."
+	convertType (AtomicType "bool") t
+	b <- getBoolValue v
+	return (b, state)
 
+-- Function with boolean return.
 evalBoolExpr (BoolFuncCall name args) state = do return (False, state) -- TODO
 
+-- Boolean not.
 evalBoolExpr (BoolNot node) state1 = do
 	(v, state2) <- evalBoolExpr node state1
 	return (not v, state2)
 
+-- Boolean and.
 evalBoolExpr (BoolAnd node1 node2) state1 = do
 	(v1, state2) <- evalBoolExpr node1 state1
 	(v2, state3) <- evalBoolExpr node2 state2
@@ -272,164 +287,92 @@ evalBoolExpr (BoolGtEq e1 e2) state1 = do
 evalBoolExpr (BoolLt e1 e2) state = evalBoolExpr (BoolGt e2 e1) state
 evalBoolExpr (BoolLtEq e1 e2) state = evalBoolExpr (BoolGtEq e2 e1) state
 
+---------------------------------------------------------------------------------------------------
+-- Valuate Numeric Expression
+---------------------------------------------------------------------------------------------------
+
 evalNumExpr :: NumNode -> OWLState -> IO (Double, String, OWLState)
---evaluates addition
-evalNumExpr (NumAdd node1 node2) state = do
-	(val1, typ1, state1) <- evalNumExpr node1 state
-	(val2, typ2, state2) <- evalNumExpr node2 state
-	--TODO evaluate type for coersion
-	return (val1 + val2, "nat", state)
 
---evaluates subtraction
-evalNumExpr (NumSub node1 node2) state = do
-	(val1, typ1, state1) <- evalNumExpr node1 state
-	(val2, typ2, state2) <- evalNumExpr node2 state
-	--TODO evaluate type for coersion
-	return (val1 - val2, "nat", state)
+-- Numeric literals.
+evalNumExpr (NumNat n) state = do return (n, "nat", state)
+evalNumExpr (NumInt n) state = do return (n, "int", state)
+evalNumExpr (NumReal n) state = do return (n, "real", state)
 
---evaluates multiplication
-evalNumExpr (NumMul node1 node2) state = do
-	(val1, typ1, state1) <- evalNumExpr node1 state
-	(val2, typ2, state2) <- evalNumExpr node2 state
-	--TODO evaluate type for coersion
-	return (val1 * val2, "nat", state)
---evaluates division TODO ask Luisa about return type of two int.
--- Always real or just entire part?
-evalNumExpr (NumDiv node1 node2) state = do
-	(val1, typ1, state1) <- evalNumExpr node1 state
-	(val2, typ2, state2) <- evalNumExpr node2 state
-	--TODO evaluate type for coersion
-	return (val1 / val2, "TODO", state)
---TODO evaluate mod. Search how to mod in python
-
-evalNumExpr node state = do 
-	--typ: type; val: value represented/contained in node
-	--print node
-	(val, typ, state2) <- evalNumLeaf node state
-	-- TODO evaluate for other expressions (recursion)
-	return (val, typ, state)
---returns the value. the type of the number and the state
-evalNumLeaf :: NumNode -> OWLState -> IO (Double, String, OWLState)
---Evaluates for natural numbers
-evalNumLeaf (NumNat n) state = do return (n, "nat", state)
---Evaluates for integer numbers
-evalNumLeaf (NumInt n) state = do return (n, "int", state)
---Evaluates for real numbers
-evalNumLeaf (NumReal n) state = do return (n, "real", state)
---Evaluates for number variables
-evalNumLeaf (NumID name) state = do
+-- Numeric variables.
+evalNumExpr (NumID name) state = do
 	let scope = getScopeID name state
 	let (varType, value) = getVar (name, scope) state
-	print state
+	print state -- DEBUG
 	v <- getNumberValue value
 	t <- getNumberType varType
 	return (v, t, state)
 
-getNumberType :: VarType -> IO String
-getNumberType (AtomicType "nat") = do return "nat"
-getNumberType (AtomicType "int") = do return "int"
-getNumberType (AtomicType "real") = do return "real"
-getNumberType a = do fail $ show a ++ "is not a number."
+-- Function with numeric return.
+evalNumExpr (NumFuncCall name args) state = do return (0, "nat", state) -- TODO
 
-getNumberValue :: VarValue -> IO Double
-getNumberValue (NumberValue n) = do return n
-getNumberValue a = fail "NAN"
-{-	print "NUMID BEGIN"
-	print state
-	--gets next variable
-	let ([(a,b,(name,typ,val):t)],c) = state
-	--verifies if variable is the desired one
-	if (n == name) then do
-		--found variable. Return its value
-		ret <- evalNumVarLeafValue typ val state
-		return ret
-	else if (t /= []) then do
-		--variable not found yet. Do recursion
-		--let (r1, r2, ([(a2,b2,t2)],c2)) = evalNumLeaf (NumID n) ([(a,b, t)],c)
-		(r1, r2, ([(a2,b2,t2)],c2)) <- evalNumLeaf (NumID n) ([(a,b, t)],c)
-		--let k = evalNumLeaf (NumID n) ([(a,b, t)],c)
-		--return ([(a2,b2, (name,typ,val):t2)],c2)
-		--return (r1, r2, ([(a2,b2, t2)],c2))
-		return (r1, r2, ([(a2,b2,(name,typ,val):t2)],c2))
-		--(name,typ,val):
-	else do
-		--variable was not declared. Return error
-		print "WTF at evalNumLeaf (NumID n) state"--TODO return error
-		print "NUMID END"
-		print t
-		print ((name, typ, val):t)
-		print "NUMID END"
-		return (73.0, "nat", state) --TODO return error
+-- Array with numeric elements.
+evalNumExpr (NumEl array num) state = do return (0, "nat", state) -- TODO
 
-{--Else case TODO whenever this message is printed, there is an expression that was not properly
-evaluated-}
-evalNumLeaf node state = do return (0, "só pro Haskell não frescar", state)
-
-evalNumVarLeafValue :: VarType -> VarValue -> OWLState -> IO (Double, String, OWLState)
-evalNumVarLeafValue typ (NumberValue val) state = do
-	if (checkType typ (AtomicType "nat")) then do
-		state2 <- evalNumLeaf (NumNat val) state
-		return state2
-	else if (checkType typ (AtomicType "int")) then do
-		state2 <- evalNumLeaf (NumInt val) state
-		return state2
-	else if (checkType typ (AtomicType "real")) then do
-		state2 <- evalNumLeaf (NumReal val) state
-		return state2
+-- Numeric negative.
+evalNumExpr (NumMinus node) state1 = do
+	(val, typ, state2) <- evalNumExpr node state1
+	if typ == "real" then
+		return (-val, "real", state2) 
 	else
-		--print "ERROR. NOT VALID TYPE AT interpreter.hs evalNumVarLeafValue"
-		return (73.0, "TODO WTF", state) --TODO return ERROR
-{-
-evalNumVarLeafValue a b state = do
-	return (-1, "WTF, DID YOU USE A POINTER?", state)-}
--}
+		return (-val, "int", state2)
+
+-- Numeric addition.
+evalNumExpr (NumAdd node1 node2) state1 = do
+	(val1, typ1, state2) <- evalNumExpr node1 state1
+	(val2, typ2, state3) <- evalNumExpr node2 state2
+	if typ1 == "real" || typ2 == "real" then
+		return (val1 + val2, "real", state3) 
+	else if typ1 == "int" || typ2 == "int" then
+		return (val1 + val2, "int", state3)
+	else
+		return (val1 + val2, "nat", state3)
+
+-- Numeric subtraction.
+evalNumExpr (NumSub node1 node2) state1 = do
+	(val1, typ1, state2) <- evalNumExpr node1 state1
+	(val2, typ2, state3) <- evalNumExpr node2 state2
+	if typ1 == "real" || typ2 == "real" then
+		return (val1 - val2, "real", state3) 
+	else 
+		return (val1 - val2, "int", state3)
+
+-- Numeric multiplication.
+evalNumExpr (NumMul node1 node2) state1 = do
+	(val1, typ1, state2) <- evalNumExpr node1 state1
+	(val2, typ2, state3) <- evalNumExpr node2 state2
+	if typ1 == "real" || typ2 == "real" then
+		return (val1 * val2, "real", state3) 
+	else if typ1 == "int" || typ2 == "int" then
+		return (val1 * val2, "int", state3)
+	else
+		return (val1 * val2, "nat", state3)
+
+-- Numeric division.
+evalNumExpr (NumDiv node1 node2) state1 = do
+	(val1, typ1, state2) <- evalNumExpr node1 state1
+	(val2, typ2, state3) <- evalNumExpr node2 state2
+	return (val1 / val2, "real", state3)
+
+-- Numeric modulus.
+evalNumExpr (NumMod node1 node2) state1 = do
+	(val1, typ1, state2) <- evalNumExpr node1 state1
+	(val2, typ2, state3) <- evalNumExpr node2 state2
+	if typ1 == "real" || typ2 == "real" then
+		return (mod' val1 val2, "real", state3) 
+	else if typ1 == "int" || typ2 == "int" then
+		return (mod' val1 val2, "int", state3)
+	else
+		return (mod' val1 val2, "nat", state3)
+
+---------------------------------------------------------------------------------------------------
+-- Evaluate Stuff Expression
+---------------------------------------------------------------------------------------------------
+
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
 	return (AtomicType "", NumberValue 0, state) -- TODO
-
----------------------------------------------------------------------------------------------------
--- Declarations
----------------------------------------------------------------------------------------------------
-
-addDec :: Declaration -> OWLState -> IO OWLState
-addDec (Var name varType Nothing) state = do return $ addVarDec name varType state
-addDec (Var name varType (Just e)) state1 = do 
-	(t, value, state2) <- evalExpr e state1
-	if checkType t varType then do -- TODO: verificar tipo t com o tipo da variavel
-		let state3 = addVarDec name varType state2
-		let scopeID = getScopeID name state3
-		return $ updateVar value (name, scopeID) state3
-	else 
-		fail "Variable not compatible."
-addDec (Function name params ret body) state = do
-	return $ addFuncDec name params ret body state
-addDec (Procedure name params body) state = do
-	return $ addProcDec name params body state
-
----------------------------------------------------------------------------------------------------
--- Declarations
----------------------------------------------------------------------------------------------------
--- ordem dos argumentos: tipo da variável; tipo esperado da variável
-checkType :: VarType -> VarType -> Bool
-checkType (AtomicType "nat") (AtomicType "nat") = True
-checkType (AtomicType "nat") (AtomicType "int") = True
-checkType (AtomicType "nat") (AtomicType "real") = True
-checkType (AtomicType "int") (AtomicType "int") = True
-checkType (AtomicType "int") (AtomicType "real") = True 
-checkType (AtomicType "real") (AtomicType "real") = True
-checkType (AtomicType "bool") (AtomicType "bool") = True
-checkType (AtomicType "char") (AtomicType "char") = True
-checkType (AtomicType "char") (AtomicType "nat") = True
-checkType (AtomicType "char") (AtomicType "int") = True
-checkType (AtomicType "char") (AtomicType "NumReal") = True
-checkType v1 v2 = False -- TODO: inserir demais tipos
-
-printValue :: VarValue -> IO()
-printValue (BoolValue b) = do
-	print b
-printValue (CharValue c) = do
-	print c
-printValue (NumberValue d) = do
-	print d
-printValue v = do
-	print v
