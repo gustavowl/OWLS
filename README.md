@@ -1,5 +1,5 @@
 # Introduction
-This is the project of the course "Linguagem de programação: conceitos e paradigmas" ministered by professor Umberto Souza da Costa at Universidade Federal do Rio Grande do Norte. The entire course was based on Sebesta's "Concepts of Programming Languages". The project is to create a programming language and an interpreter for it, using Haskell.
+This is the project of the course "Linguagem de programaÃ§Ã£o: conceitos e paradigmas" ministered by professor Umberto Souza da Costa at Universidade Federal do Rio Grande do Norte. The entire course was based on Sebesta's "Concepts of Programming Languages". The project is to create a programming language and an interpreter for it, using Haskell.
 
 The purpose of the language was to be used for developing Operating Systems, hence, it is based in C and Ada. The name \"OWLS\" is just a pun with "OWLperating Systems". Even though the original idea was to support concurrency, our language does not; since it is out of the scope of the course.
 
@@ -29,7 +29,7 @@ By executing this command, the interpreter will execute the desired code. It is 
 - [ ] Add Stuff to list
 ## Tasks acquired and listed by person
 ### Ana
-- [ ] ?
+- [X] updateVar
 ### Gustavo
 - [ ] Change a variable value (ProgramState.hs:109)
 - [ ] Evaluate Number Expressions (Interpreter.hs:232-237)
