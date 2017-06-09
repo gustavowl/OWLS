@@ -35,19 +35,16 @@ callMain args (Function name params ret body) state1 = do
 	return ret
 callMain _ _ _ = do return 0
 
-callFunction :: String -> [Expr] -> VarType -> OWLState -> IO (OWLState, VarValue)
-callFunction name args retType state1 = do
-	let scopeID = getScopeID name state1
+callFunction :: Key -> [Expr] -> OWLState -> IO (OWLState, VarValue)
+callFunction (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, retType, body) <- getFuncInfo name t v
-	-- TODO: checar tipo de retorno
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state2
 	runFuncBody name body retType state3 >>= return
 
-callProcedure :: String -> [Expr] -> OWLState -> IO OWLState
-callProcedure name args state1 = do
-	let scopeID = getScopeID name state1
+callProcedure :: Key -> [Expr] -> OWLState -> IO OWLState
+callProcedure (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, body) <- getProcInfo name t v
 	let state2 = newScope parentID state1
@@ -67,6 +64,12 @@ getProcInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], [Sta
 getProcInfo name (ProcType _) (ProcValue parentID params body) = do
 	return (parentID, params, body)
 getProcInfo name _ _ = do fail $ name ++ " is not a procedure."
+
+getFuncRetType :: Key -> OWLState -> IO VarType
+getFuncRetType (name, scopeID) state = do
+	let (t, v) = getVar (name, scopeID) state
+	(parentID, params, retType, body) <- getFuncInfo name t v
+	return retType
 
 ---------------------------------------------------------------------------------------------------
 -- Statements
@@ -146,8 +149,10 @@ runStatement (For ini expr incr body) state = do
 	return (state, Continue)
 
 -- General statements. (TODO)
-runStatement (ProcCall name params) state = do
-	return (state, Continue)
+runStatement (ProcCall name args) state1 = do
+	let scopeID = getScopeID name state1
+	state2 <- callProcedure (name, scopeID) args state1
+	return (state2, Continue)
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
@@ -222,7 +227,13 @@ evalBoolExpr (BoolID name) state = do
 	return (b, state)
 
 -- Function with boolean return.
-evalBoolExpr (BoolFuncCall name args) state = do return (False, state) -- TODO
+evalBoolExpr (BoolFuncCall name args) state1 = do 
+	let scopeID = getScopeID name state1
+	retType <- getFuncRetType (name, scopeID) state1
+	convertType (AtomicType "bool") retType
+	(state2, value) <- callFunction (name, scopeID) args state1
+	b <- getBoolValue value
+	return (b, state2)
 
 -- Boolean not.
 evalBoolExpr (BoolNot node) state1 = do
@@ -302,13 +313,19 @@ evalNumExpr (NumReal n) state = do return (n, "real", state)
 evalNumExpr (NumID name) state = do
 	let scope = getScopeID name state
 	let (varType, value) = getVar (name, scope) state
-	print state -- DEBUG
+	-- print state -- (DEBUG)
 	v <- getNumberValue value
 	t <- getNumberType varType
 	return (v, t, state)
 
 -- Function with numeric return.
-evalNumExpr (NumFuncCall name args) state = do return (0, "nat", state) -- TODO
+evalNumExpr (NumFuncCall name args) state1 = do
+	let scopeID = getScopeID name state1
+	retType <- getFuncRetType (name, scopeID) state1
+	t <- getNumberType retType
+	(state2, value) <- callFunction (name, scopeID) args state1
+	n <- getNumberValue value
+	return (n, t, state2)
 
 -- Array with numeric elements.
 evalNumExpr (NumEl array num) state = do return (0, "nat", state) -- TODO

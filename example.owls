@@ -1,6 +1,14 @@
 x : int = 1;
 
-# func bla1 (a : int, b : int) : int {}
+a : int = 5;
+
+func bla () : int {
+	if (false) {
+		return 42;
+	} else {
+		return 37;
+	}
+}
 
 # const y : int = 10;
 
@@ -12,9 +20,13 @@ x : int = 1;
 
 # func blo (a : func(b : int)[int], b : int)
 
-# proc ble (k : char[2]) {
-# 	write(k);
-#}
+proc ble () {
+	a = a - 1;
+	write(a * 100);
+	if (a > 0) {	
+		ble();
+	}
+}
 
 main() {
 	a : int = 10;
@@ -27,8 +39,14 @@ main() {
 	# for (i : int = 0; i < 10; i = i + 1) {
 	#	write(to_s(i));
 	#}
-	# if (a != b) {
-	#	ble(x);
-	#}
-	return 10 + 50 * 2 - 5;
+	write(bla());
+	if (a != x) {
+		write(a + 10000);
+		x = bla() + 17 + bla();
+		write(x);
+		ble();
+		return 10;
+	} else {
+		return 10 + 50 * 2 - 5;
+	}
 }
