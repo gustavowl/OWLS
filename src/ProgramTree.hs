@@ -32,54 +32,35 @@ data Statement = VarDec Declaration
 	deriving (Eq,Show)
 	-- TODO: mais coisa
 
-data Expr = BoolExpr BoolNode 
-	| NumExpr NumNode 
-	| StuffExpr StuffNode
-	deriving (Eq,Show)
-
-data BoolNode = BoolLit Bool
-	| BoolID String 
-	| BoolEl StuffNode NumNode
-	| BoolFuncCall String [Expr] 
-	| BoolField StuffNode String
-	| BoolPtr StuffNode
-	| BoolNot BoolNode
-	| BoolAnd BoolNode BoolNode
-	| BoolOr BoolNode BoolNode
-	| BoolAndC BoolNode BoolNode
-	| BoolOrC BoolNode BoolNode
+data Expr = BoolLit Bool
+	| NatLit Double
+	| IntLit Double
+	| RealLit Double
+	| CharLit Char
+	| ArrayLit [Expr]
+	| ID String
+	| ArrayEl Expr Expr
+	| FuncCall String [Expr]
+	| ReadCall
+	| Field Expr String
+	| Ptr Expr
+	| BoolNot Expr
+	| BoolAnd Expr Expr
+	| BoolOr Expr Expr
+	| BoolAndC Expr Expr
+	| BoolOrC Expr Expr
 	| BoolEq Expr Expr
 	| BoolDif Expr Expr
 	| BoolGt Expr Expr
 	| BoolGtEq Expr Expr
 	| BoolLt Expr Expr
 	| BoolLtEq Expr Expr
-	deriving (Eq,Show)
-
-data NumNode = NumNat Double
-	| NumInt Double
-	| NumReal Double
-	| NumID String
-	| NumEl StuffNode NumNode
-	| NumFuncCall String [Expr]
-	| NumField StuffNode String
-	| NumPtr StuffNode
-	| NumMinus NumNode
-	| NumAdd NumNode NumNode
-	| NumSub NumNode NumNode
-	| NumMul NumNode NumNode
-	| NumDiv NumNode NumNode
-	| NumMod NumNode NumNode
-	deriving (Eq,Show)
-
-data StuffNode = StuffID String
-	| StuffEl StuffNode NumNode
-	| StuffChar Char
-	| StuffArray [Expr]
-	| StuffPtr StuffNode
-	| StuffField StuffNode String
-	| StuffFuncCall String [Expr]
-	| StuffReadCall
+	| NumMinus Expr
+	| NumAdd Expr Expr
+	| NumSub Expr Expr
+	| NumMul Expr Expr
+	| NumDiv Expr Expr
+	| NumMod Expr Expr
 	deriving (Eq,Show)
 
 data VarType = AtomicType String 

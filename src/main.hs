@@ -13,5 +13,4 @@ parseProgram input = case
 	Parser.parseOWLS input of
 		Left error -> print error
 		Right program -> do
-			print program
 			Interpreter.runProgram program

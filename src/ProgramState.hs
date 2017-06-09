@@ -215,20 +215,12 @@ convertType a b = do
 	else
 		fail $ "Could not convert " ++ show b ++ " to " ++ show a ++ "."
 
--- ordem dos argumentos: tipo da variável; tipo esperado da variável
-hasCompatibleType :: VarType -> VarType -> Bool
-hasCompatibleType (AtomicType "nat") (AtomicType "nat") = True
-hasCompatibleType (AtomicType "nat") (AtomicType "int") = True
-hasCompatibleType (AtomicType "nat") (AtomicType "real") = True
-hasCompatibleType (AtomicType "int") (AtomicType "int") = True
-hasCompatibleType (AtomicType "int") (AtomicType "real") = True 
-hasCompatibleType (AtomicType "real") (AtomicType "real") = True
-hasCompatibleType (AtomicType "bool") (AtomicType "bool") = True
-hasCompatibleType (AtomicType "char") (AtomicType "char") = True
-hasCompatibleType (AtomicType "char") (AtomicType "nat") = True
-hasCompatibleType (AtomicType "char") (AtomicType "int") = True
-hasCompatibleType (AtomicType "char") (AtomicType "NumReal") = True
-hasCompatibleType v1 v2 = False -- TODO: inserir demais tipos
+-- ExpectedType, ActualType
+canConvertType :: VarType -> VarType -> Bool
+canConvertType (AtomicType "int") (AtomicType "nat") = True
+canConvertType (AtomicType "real") (AtomicType "nat") = True
+canConvertType (AtomicType "real") (AtomicType "int") = True
+canConvertType a b = a == b
 
 -- TODO
 -- ...
