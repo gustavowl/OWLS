@@ -386,14 +386,16 @@ addDec (Procedure name params body) state = do
 -- ordem dos argumentos: tipo da variável; tipo esperado da variável
 checkType :: VarType -> VarType -> Bool
 checkType (AtomicType "nat") (AtomicType "nat") = True
-checkType (AtomicType "int") (AtomicType "int") = True
-checkType (AtomicType "real") (AtomicType "real") = True
 checkType (AtomicType "nat") (AtomicType "int") = True
-checkType (AtomicType "int") (AtomicType "real") = True 
 checkType (AtomicType "nat") (AtomicType "real") = True
+checkType (AtomicType "int") (AtomicType "int") = True
+checkType (AtomicType "int") (AtomicType "real") = True 
+checkType (AtomicType "real") (AtomicType "real") = True
 checkType (AtomicType "bool") (AtomicType "bool") = True
 checkType (AtomicType "char") (AtomicType "char") = True
 checkType (AtomicType "char") (AtomicType "nat") = True
+checkType (AtomicType "char") (AtomicType "int") = True
+checkType (AtomicType "char") (AtomicType "NumReal") = True
 checkType v1 v2 = False -- TODO: inserir demais tipos
 
 printValue :: VarValue -> IO()
