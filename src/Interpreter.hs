@@ -85,8 +85,16 @@ runFuncBody name (s:stmts) expectedType state1 = do
 			if checkType exprType expectedType then 
 				return (state3, value)
 			else
-				fail "WTF"
+				fail $ "Error in type consistency. Expected  " ++ errorType expectedType ++ " current type " ++ errorType exprType ++ " ."
+				--fail $ "Error in type consistency. Expected " ++ expectedType ++ " current." 
 		f _ = fail "WTF"
+
+-- Verificar melhor posicao para adicionar
+errorType :: VarType -> String
+errorType (AtomicType "nat") = "nat"
+errorType (AtomicType "int") = "int"
+errorType (AtomicType "real") = "real"
+errorType (AtomicType "char") = "char"
 
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
 runProcBody name [] state = do return state
