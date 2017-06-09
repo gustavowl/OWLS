@@ -155,30 +155,31 @@ runStatement (WriteCall expr) state1 = do
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
-{-
+
+
 runStatement (Assignment name assign) state1 = do -- minha versão está dando erro de tipo
-	scope <- getScopeID name state1
-	(varTypeAssign, _) <- getVar (name, scope) state1
+	let scope = getScopeID name state1
+	let (varTypeAssign, _) = getVar (name, scope) state1
 	(varType, value, state2) <- evalExpr assign state1
 	-- TODO verificar tipo varType x varTypeAssign 
-	state3 <- updateVar value (name, scope) state2
+	let state3 = updateVar value (name, scope) state2
 	return (state3, Continue)
--}
-{-runStatement (Assignment name assign) state = do
+{-
+runStatement (Assignment name assign) state1 = do
 	print "BEGIN ASSIGNMENT" --TODO delete this line (used for debugging)
-	print name
-	print assign
-	print state
-	let ([(a,b,[(c,d,g)])], f) = state
-	(_, e, state2) <- evalExpr assign state
+	--print name
+	--print assign
+	--print state
+	(_, e, state2) <- evalExpr assign state1
 	print e
 	--let state2 = ([(a,b,[(c,d,e)])], f)
 	--print state2
 	print "END ASSIGNMENT"
 	return (state2, Continue)
-	-}
+
 runStatement (Assignment name assign) state = do
 	return (state, Continue)	
+-}
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression
 ---------------------------------------------------------------------------------------------------
@@ -316,8 +317,24 @@ evalNumLeaf (NumInt n) state = do return (n, "int", state)
 --Evaluates for real numbers
 evalNumLeaf (NumReal n) state = do return (n, "real", state)
 --Evaluates for number variables
-evalNumLeaf (NumID n) state = do
-	print "NUMID BEGIN"
+evalNumLeaf (NumID name) state = do
+	let scope = getScopeID name state
+	let (varType, value) = getVar (name, scope) state
+	print state
+	v <- getNumberValue value
+	t <- getNumberType varType
+	return (v, t, state)
+
+getNumberType :: VarType -> IO String
+getNumberType (AtomicType "nat") = do return "nat"
+getNumberType (AtomicType "int") = do return "int"
+getNumberType (AtomicType "real") = do return "real"
+getNumberType a = do fail $ show a ++ "is not a number."
+
+getNumberValue :: VarValue -> IO Double
+getNumberValue (NumberValue n) = do return n
+getNumberValue a = fail "NAN"
+{-	print "NUMID BEGIN"
 	print state
 	--gets next variable
 	let ([(a,b,(name,typ,val):t)],c) = state
@@ -365,7 +382,7 @@ evalNumVarLeafValue typ (NumberValue val) state = do
 {-
 evalNumVarLeafValue a b state = do
 	return (-1, "WTF, DID YOU USE A POINTER?", state)-}
-
+-}
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
 	return (AtomicType "", NumberValue 0, state) -- TODO

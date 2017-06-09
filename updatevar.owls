@@ -1,0 +1,9 @@
+main() {
+	x : int = 10;
+	y : int = 73;
+	write(x);
+	x = 12 + 2;
+	write(x + y);
+	
+	return 10 + 50 * 2 - 5;
+}
