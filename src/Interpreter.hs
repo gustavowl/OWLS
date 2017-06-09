@@ -144,16 +144,32 @@ runStatement (ProcCall name params) state = do
 	return (state, Continue)
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
-	print v --TODO stop printing VarType and only print value (e.g. NumberValue)
+	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
-runStatement (Assignment name assign) state1 = do
+{-
+runStatement (Assignment name assign) state1 = do -- minha versão está dando erro de tipo
 	scope <- getScopeID name state1
 	(varTypeAssign, _) <- getVar (name, scope) state1
 	(varType, value, state2) <- evalExpr assign state1
 	-- TODO verificar tipo varType x varTypeAssign 
 	state3 <- updateVar value (name, scope) state2
 	return (state3, Continue)
-	
+-}
+{-runStatement (Assignment name assign) state = do
+	print "BEGIN ASSIGNMENT" --TODO delete this line (used for debugging)
+	print name
+	print assign
+	print state
+	let ([(a,b,[(c,d,g)])], f) = state
+	(_, e, state2) <- evalExpr assign state
+	print e
+	--let state2 = ([(a,b,[(c,d,e)])], f)
+	--print state2
+	print "END ASSIGNMENT"
+	return (state2, Continue)
+	-}
+runStatement (Assignment name assign) state = do
+	return (state, Continue)	
 ---------------------------------------------------------------------------------------------------
 -- Valuate Expression
 ---------------------------------------------------------------------------------------------------
@@ -290,9 +306,56 @@ evalNumLeaf (NumNat n) state = do return (n, "nat", state)
 evalNumLeaf (NumInt n) state = do return (n, "int", state)
 --Evaluates for real numbers
 evalNumLeaf (NumReal n) state = do return (n, "real", state)
+--Evaluates for number variables
+evalNumLeaf (NumID n) state = do
+	print "NUMID BEGIN"
+	print state
+	--gets next variable
+	let ([(a,b,(name,typ,val):t)],c) = state
+	--verifies if variable is the desired one
+	if (n == name) then do
+		--found variable. Return its value
+		ret <- evalNumVarLeafValue typ val state
+		return ret
+	else if (t /= []) then do
+		--variable not found yet. Do recursion
+		--let (r1, r2, ([(a2,b2,t2)],c2)) = evalNumLeaf (NumID n) ([(a,b, t)],c)
+		(r1, r2, ([(a2,b2,t2)],c2)) <- evalNumLeaf (NumID n) ([(a,b, t)],c)
+		--let k = evalNumLeaf (NumID n) ([(a,b, t)],c)
+		--return ([(a2,b2, (name,typ,val):t2)],c2)
+		--return (r1, r2, ([(a2,b2, t2)],c2))
+		return (r1, r2, ([(a2,b2,(name,typ,val):t2)],c2))
+		--(name,typ,val):
+	else do
+		--variable was not declared. Return error
+		print "WTF at evalNumLeaf (NumID n) state"--TODO return error
+		print "NUMID END"
+		print t
+		print ((name, typ, val):t)
+		print "NUMID END"
+		return (73.0, "nat", state) --TODO return error
+
 {--Else case TODO whenever this message is printed, there is an expression that was not properly
 evaluated-}
 evalNumLeaf node state = do return (0, "só pro Haskell não frescar", state)
+
+evalNumVarLeafValue :: VarType -> VarValue -> OWLState -> IO (Double, String, OWLState)
+evalNumVarLeafValue typ (NumberValue val) state = do
+	if (checkType typ (AtomicType "nat")) then do
+		state2 <- evalNumLeaf (NumNat val) state
+		return state2
+	else if (checkType typ (AtomicType "int")) then do
+		state2 <- evalNumLeaf (NumInt val) state
+		return state2
+	else if (checkType typ (AtomicType "real")) then do
+		state2 <- evalNumLeaf (NumReal val) state
+		return state2
+	else
+		--print "ERROR. NOT VALID TYPE AT interpreter.hs evalNumVarLeafValue"
+		return (73.0, "TODO WTF", state) --TODO return ERROR
+{-
+evalNumVarLeafValue a b state = do
+	return (-1, "WTF, DID YOU USE A POINTER?", state)-}
 
 evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
 evalStuffExpr node state = do
@@ -331,4 +394,14 @@ checkType (AtomicType "nat") (AtomicType "real") = True
 checkType (AtomicType "bool") (AtomicType "bool") = True
 checkType (AtomicType "char") (AtomicType "char") = True
 checkType (AtomicType "char") (AtomicType "nat") = True
-checkType v1 v2 = True -- TODO: inserir demais tipos
+checkType v1 v2 = False -- TODO: inserir demais tipos
+
+printValue :: VarValue -> IO()
+printValue (BoolValue b) = do
+	print b
+printValue (CharValue c) = do
+	print c
+printValue (NumberValue d) = do
+	print d
+printValue v = do
+	print v

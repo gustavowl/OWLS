@@ -106,7 +106,7 @@ addVarDec name varType ([(a, b, table)], types) = let
 	([(a, b, newElement:table)], types)
 
 updateVar :: VarValue -> Key -> OWLState -> OWLState
-updateVar value key state = state -- TODO: mudar o valor da variável
+updateVar value key state = state
 
 getVar :: Key -> OWLState -> (VarType, VarValue)
 getVar (name, scopeID) state = let

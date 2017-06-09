@@ -1,10 +1,10 @@
 x : int = 1;
 
-func bla1 (a : int, b : int) : int {}
+# func bla1 (a : int, b : int) : int {}
 
 # const y : int = 10;
 
-bla2 : int[7] = {1, 20, 3, 4, 5, 6, 7};
+# bla2 : int[7] = {1, 20, 3, 4, 5, 6, 7};
 
 # bla3 : @int;
 
@@ -12,22 +12,23 @@ bla2 : int[7] = {1, 20, 3, 4, 5, 6, 7};
 
 # func blo (a : func(b : int)[int], b : int)
 
-proc ble (k : char[2]) {
-	write(k);
-}
+# proc ble (k : char[2]) {
+# 	write(k);
+#}
 
 main() {
 	a : int = 10;
-	x = "12";
-	b : char = x[1];
-	while (a > 0) {
-		a = a - 1;
-	}
-	for (i : int = 0; i < 10; i = i + 1) {
-		write(to_s(i));
-	}
-	if (a != b) {
-		ble(x);
-	}
+	# x = "12";
+	# b : char = x[1];
+	write(a);
+	# while (a > 0) {
+	#	a = a - 1;
+	#}
+	# for (i : int = 0; i < 10; i = i + 1) {
+	#	write(to_s(i));
+	#}
+	# if (a != b) {
+	#	ble(x);
+	#}
 	return 10 + 50 * 2 - 5;
 }
