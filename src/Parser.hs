@@ -132,6 +132,11 @@ parseProcCall = do
 	args <- parens (sepBy parseExpr comma)
 	return $ ProcCall name args
 
+parseReadCall :: OWLParser Statement
+parseReadCall = do
+	readToken
+	return ReadCall
+
 parseWriteCall :: OWLParser Statement
 parseWriteCall = do
 	writeToken

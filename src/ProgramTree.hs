@@ -23,6 +23,7 @@ data Statement = VarDec Declaration
 	| FuncRet Expr
 	| ProcRet
 	| ProcCall String [Expr]
+	| ReadCall
 	| WriteCall Expr
 	| Assignment String Expr
 	| If Expr [Statement] [Statement]

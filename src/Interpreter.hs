@@ -57,19 +57,28 @@ addParameters [] [] state = do return state
 addParameters (a:args) ((Var name t1 expr):params) state1 = do 
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 addParameters (a:args) ((Function name p ret body):params) state1 = do 
-	(t, v, state2) <- evalExpr a state1
-	convertType t (FuncType (extractParamTypes p) ret)
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let t1 = FuncType (extractParamTypes p) ret
+	(t2, v, state2) <- evalExpr a state1
+	convertType t1 t2
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 addParameters (a:args) ((Procedure name p body):params) state1 = do 
-	(t, v, state2) <- evalExpr a state1
-	convertType t (ProcType (extractParamTypes p))
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let t1 = ProcType (extractParamTypes p)
+	(t2, v, state2) <- evalExpr a state1
+	convertType t1 t2
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 
+addParameters r f s = fail "WTF"
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
@@ -132,6 +141,9 @@ runIfElseBody (s:stmts) state = do
 		f (state1, Continue) = (runIfElseBody stmts state1)
 		f _ = fail "WTF"
 
+convertArrayCharToExpr :: [Char] -> Expr
+convertArrayCharToExpr arrayChar = (NumExpr (NumInt 666))
+
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
 -- Declarations.
@@ -169,6 +181,11 @@ runStatement (ProcCall name args) state1 = do
 	let scopeID = getScopeID name state1
 	state2 <- callProcedure (name, scopeID) args state1
 	return (state2, Continue)
+
+runStatement (ReadCall) state = do 
+	line <- getLine
+	let expr = convertArrayCharToExpr line
+	return (state, Return expr)
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
