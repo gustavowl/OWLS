@@ -141,9 +141,6 @@ runIfElseBody (s:stmts) state = do
 		f (state1, Continue) = (runIfElseBody stmts state1)
 		f _ = fail "WTF"
 
-convertArrayCharToExpr :: [Char] -> Expr
-convertArrayCharToExpr arrayChar = (NumExpr (NumInt 666))
-
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
 -- Declarations.
@@ -182,10 +179,6 @@ runStatement (ProcCall name args) state1 = do
 	state2 <- callProcedure (name, scopeID) args state1
 	return (state2, Continue)
 
-runStatement (ReadCall) state = do 
-	line <- getLine
-	let expr = convertArrayCharToExpr line
-	return (state, Return expr)
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
@@ -250,6 +243,9 @@ evalNumExpr expr state1 = do
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
 
+convertArrayCharToExpr :: [Char] -> VarValue
+convertArrayCharToExpr arrayChar = ArrayValue [] -- TODO
+
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
@@ -268,6 +264,13 @@ evalExpr (FuncCall name args) state1 = do
 	let scopeID = getScopeID name state1
 	(state2, t, v) <- callFunction (name, scopeID) args state1
 	return (t, v, state2)
+
+-- Read call.
+evalExpr (ReadCall) state = do
+	line <- getLine
+	let expr = convertArrayCharToExpr line
+	let size = NatLit $ (fromIntegral (length line)) + 0.0
+	return (ArrayType (AtomicType "char") size, expr, state)
 
 -- TODO: array element, pointer, field
 

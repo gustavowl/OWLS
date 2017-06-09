@@ -15,6 +15,7 @@ parseExpr = parseBoolExpr
 
 parseExprLeaf :: OWLParser Expr
 parseExprLeaf = (try parseFuncCall)
+	<|> (try parseReadCall)
 	<|> (try parseArrayEl)
 	<|> (try parsePtr)
 	<|> (try parseField)
