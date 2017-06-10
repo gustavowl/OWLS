@@ -78,7 +78,7 @@ addParameters (a:args) ((Procedure name p body):params) state1 = do
 	let state4 = updateVar v (name, scopeID) state3
 	addParameters args params state4
 
-addParameters r f s = fail "WTF"
+addParameters r f s = fail "Error in adding parameter"
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
@@ -117,13 +117,6 @@ runFuncBody name (s:stmts) expectedType state1 = do
 			return (state3, value)
 		f (state2, BreakCall) = fail "Break is not breaking anything."
 
--- Verificar melhor posicao para adicionar
-errorType :: VarType -> String
-errorType (AtomicType "nat") = "nat"
-errorType (AtomicType "int") = "int"
-errorType (AtomicType "real") = "real"
-errorType (AtomicType "char") = "char"
-
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
 runProcBody name [] state = do return state
 runProcBody name (s:stmts) state1 = do 
@@ -139,7 +132,7 @@ runIfElseBody (s:stmts) state = do
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
 		f (state1, Continue) = (runIfElseBody stmts state1)
-		f _ = fail "WTF"
+		f _ = fail "Error in block (if else)."
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
@@ -434,3 +427,14 @@ evalExpr (NumMod expr1 expr2) state1 = do
 		return $ numToExpr "int" (mod' val1 val2) state3
 	else
 		return $ numToExpr "nat" (mod' val1 val2) state3
+
+
+---------------------------------------------------------------------------------------------------
+-- Check Errors Functions
+---------------------------------------------------------------------------------------------------
+
+errorType :: VarType -> String
+errorType (AtomicType "nat") = "nat"
+errorType (AtomicType "int") = "int"
+errorType (AtomicType "real") = "real"
+errorType (AtomicType "char") = "char"
