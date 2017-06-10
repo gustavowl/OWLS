@@ -115,7 +115,7 @@ runFuncBody name (s:stmts) expectedType state1 = do
 			(exprType, value, state3) <- evalExpr expr state2
 			convertType expectedType exprType
 			return (state3, value)
-		f (state2, BreakCall) = fail "Break is not breaking anything."
+		f (state2, BreakCall) = fail "Break cannot break a function."
 
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
 runProcBody name [] state = do return state
@@ -124,7 +124,7 @@ runProcBody name (s:stmts) state1 = do
 		f (state2, Return _) = fail $ "Procedure " ++ name ++ " must not return a value."
 		f (state2, Continue) = runProcBody name stmts state2 >>= return
 		f (state2, Finish) = do return state2
-		f (state2, BreakCall) = fail "Break is not breaking anything."
+		f (state2, BreakCall) = fail "Break cannot breaking a procedure."
 
 runIfElseBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
 runIfElseBody [] state = do return (state, Continue)
@@ -132,6 +132,7 @@ runIfElseBody (s:stmts) state = do
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
 		f (state1, Continue) = (runIfElseBody stmts state1)
+		f (state1, BreakCall) = do return (state1, BreakCall)
 		f _ = fail "Error in block (if else)."
 
 runWhileBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
@@ -147,7 +148,7 @@ runWhileBody (s:stmts) state = do --executes next statement
 runWhileEvalResult :: Expr -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
 runWhileEvalResult expr body state Continue = (runStatement (While expr body) state) --iterate once
 runWhileEvalResult _ _ state (Return expr) = do return (state, Return expr) --returns from function
-runWhileEvalResult _ _ state (BreakCall) = do return (state, BreakCall) --forces loop stop
+runWhileEvalResult _ _ state (BreakCall) = do return (state, Continue) --forces loop stop, But keeps running parent block
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
@@ -185,14 +186,13 @@ runStatement (While expr body) state1 = do
 		--evaluates result to decide wheter should stop or continue iterating
 		runWhileEvalResult expr body state3 result
 	else do
-		return (state2, Continue)
-	--else just do nothing. will stop running
-
-	--f (state3, a) = do return (state3, Continue) --End of while
-	--f (state3, Continue) = (runStatement (While expr body) state3) --do recursion (one more iteration)
+		return (state2, Continue) --else just do nothing. will stop running
 
 runStatement (For ini expr incr body) state = do
 	return (state, Continue)
+
+runStatement Break state = do
+	return (state, BreakCall)
 
 -- General statements. (TODO)
 runStatement (ProcCall name args) state1 = do

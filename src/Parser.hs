@@ -111,6 +111,7 @@ parseStatement = (try parseDecStatement)
 	<|> (try parseCondition)
 	<|> (try parseWhile)
 	<|> (try parseFor)
+	<|> (try parseBreak)
 	-- TODO: other statement types
 
 parseSemi :: OWLParser Statement -> OWLParser Statement
@@ -205,4 +206,5 @@ parseForInit = do
 parseBreak :: OWLParser Statement
 parseBreak = do
 	breakToken
+	semi
 	return Break
