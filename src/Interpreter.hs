@@ -221,15 +221,18 @@ printValue _ (BoolValue b) = do
 printValue _ (CharValue c) = do
 	putChar c
 printValue (AtomicType "real") (NumberValue d) = do
-	print d
+	putStr $ (show d)
 printValue _ (NumberValue d) = do
-	print (round d)
+	putStr $ (show (round d))
 printValue t (ArrayValue l e) = do
-	printValueArray t e 
+	printValueArray t l e 
 
-printValueArray :: VarType -> [VarValue] -> IO()
-printValueArray t e = do
-	printValue t $ e !! 0 --Faltar percorrer a lista para imprimir 
+printValueArray t l (e: e1) = do
+	printValue t e  --Faltar percorrer a lista para imprimir 
+	if l > 1 then
+		printValueArray t (l - 1) e1
+	else
+		putStr "" 
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
