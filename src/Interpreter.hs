@@ -5,6 +5,7 @@ import System.IO
 import ProgramTree
 import ProgramState
 import Expr --needed for getting leaf nodes values
+import Data.List
 
 runProgram :: Program -> IO()
 runProgram (types, decs, main) = do
@@ -320,8 +321,9 @@ evalExpr (FuncCall name args) state1 = do
 -- Read call.
 evalExpr (ReadCall) state = do
 	line <- getLine
-	let expr = convertArrayCharToExpr line
-	return (ArrayType (AtomicType "char"), expr, state)
+	let size = genericLength line
+	let expr = ArrayValue size $ convertArrayCharToExpr line 
+	return (AtomicType "char", expr, state) -- ADD ArrayValue
 
 -- Array call.
 evalExpr (ArrayCall exprs) state = do
@@ -504,8 +506,17 @@ evalExpr (NumMod expr1 expr2) state1 = do
 -- Auxiliary
 --------------------------------------------------------------------------------------------------
 
-convertArrayCharToExpr :: [Char] -> VarValue
-convertArrayCharToExpr arrayChar = ArrayValue 0 [] -- TODO
+convertArrayCharToExpr :: [Char] -> [VarValue]
+convertArrayCharToExpr [] = []  
+convertArrayCharToExpr (x:xs) = (CharValue x) : convertArrayCharToExpr xs 
+--stringToArray (x:xs) = (CharLit x) : stringToArray xs
+
+--printValue t e  
+	--if l > 1 then
+		--printValueArray t (l - 1) e1
+	--else
+		--putStr "" 
+
 
 createUntypedArrayValue :: [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
 createUntypedArrayValue [] state = do fail "Cannot create empty array."
