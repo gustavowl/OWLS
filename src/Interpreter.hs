@@ -137,13 +137,13 @@ runIfElseBody (s:stmts) state = do
 		f (state1, BreakCall) = do return (state1, BreakCall)
 		f _ = fail "Error in block (if else)."
 
-runWhileBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+runLoopBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
 --when finishes running while loop; try running it again
-runWhileBody [] state = do return (state, Continue) 
-runWhileBody (s:stmts) state = do --executes next statement
+runLoopBody [] state = do return (state, Continue) 
+runLoopBody (s:stmts) state = do --executes next statement
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
-		f (state1, Continue) = (runWhileBody stmts state1)
+		f (state1, Continue) = (runLoopBody stmts state1)
 		f (state1, BreakCall) = do return (state1, BreakCall)
 	--TODO stop when break
 
@@ -151,6 +151,30 @@ runWhileEvalResult :: Expr -> [Statement] -> OWLState -> StatementResult -> IO (
 runWhileEvalResult expr body state Continue = (runStatement (While expr body) state) --iterate once
 runWhileEvalResult _ _ state (Return expr) = do return (state, Return expr) --returns from function
 runWhileEvalResult _ _ state (BreakCall) = do return (state, Continue) --forces loop stop, But keeps running parent block
+
+runForEvalResult :: Expr -> Statement -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
+runForEvalResult expr incr body state Continue = (runForIncrementation expr incr body state) --increments and iterates
+runForEvalResult _ incr _ state (Return expr) = do return (state, Return expr) --returns from function
+runForEvalResult _ incr _ state (BreakCall) = do return (state, Continue) --forces loop stop, But keeps running parent block
+
+runForIteration :: Expr -> Statement -> [Statement] -> OWLState -> IO (OWLState, StatementResult)
+runForIteration expr incr body state1 = do
+	--evaluates condition
+	(varType, varValue, state2) <- evalExpr expr state1
+	--verifies if type is valid. convertType will throw an error otherwise
+	convertType (AtomicType "bool") varType
+	if varValue == BoolValue True then do
+		(state3, result) <- runLoopBody body state2 --executes body
+		--evaluates result to decide wheter should stop or continue iterating
+		runForEvalResult expr incr body state3 result
+	else do
+		return (state2, Continue) --else just do nothing. will stop running
+
+--executes incrementation of for loop
+runForIncrementation :: Expr -> Statement -> [Statement] -> OWLState -> IO(OWLState, StatementResult)
+runForIncrementation expr incr body state1 = do
+	(state2, _) <- runStatement incr state1
+	runForIteration expr incr body state2
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
@@ -184,14 +208,23 @@ runStatement (While expr body) state1 = do
 	--verifies if type is valid. convertType will throw an error otherwise
 	convertType (AtomicType "bool") varType
 	if varValue == BoolValue True then do
-		(state3, result) <- runWhileBody body state2 --executes body
+		(state3, result) <- runLoopBody body state2 --executes body
 		--evaluates result to decide wheter should stop or continue iterating
 		runWhileEvalResult expr body state3 result
 	else do
 		return (state2, Continue) --else just do nothing. will stop running
 
-runStatement (For ini expr incr body) state = do
-	return (state, Continue)
+--these will only be executed once
+runStatement (For (Var id varType initVal) expr incr body) state1 = do
+	(state2, _) <- runStatement (VarDec (Var id varType initVal)) state1
+	runForIteration expr incr body state2
+runStatement (For (Function name params ret body1) expr incr body2) state1 = do
+	(state2, _) <- runStatement (FuncDec (Function name params ret body1)) state1
+	return (state2, Continue)
+runStatement (For (Procedure name params body1) expr incr body2) state1 = do
+	(state2, _) <- runStatement (ProcDec (Procedure name params body1)) state1
+	return (state2, Continue)
+
 
 runStatement Break state = do
 	return (state, BreakCall)
