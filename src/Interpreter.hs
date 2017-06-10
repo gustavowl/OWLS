@@ -26,7 +26,7 @@ getMainArgs = []
 callMain :: [Expr] -> Declaration -> OWLState -> IO Integer
 callMain args (Function name params ret body) state1 = do
 	let state2 = newScope 0 state1
-	state3 <- addParameters args params state2
+	state3 <- addParameters args params state1 state2
 	(state4, v) <- runFuncBody name body ret state3
 	let ret = f v where
 		f (NumberValue n) = round n
@@ -39,7 +39,7 @@ callFunction (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, retType, body) <- getFuncInfo name t v
 	let state2 = newScope parentID state1
-	state3 <- addParameters args params state2
+	state3 <- addParameters args params state1 state2
 	(state4, value) <- runFuncBody name body retType state3
 	return (retType, value, popScope state4)
 
@@ -48,25 +48,26 @@ callProcedure (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, body) <- getProcInfo name t v
 	let state2 = newScope parentID state1
-	state3 <- addParameters args params state2
+	state3 <- addParameters args params state1 state2
 	state4 <- runProcBody name body state3
 	return $ popScope state4
 
-addParameters :: [Expr] -> [Declaration] -> OWLState -> IO OWLState
-addParameters [] [] state = do return state
-addParameters args [] s = do 
+-- args, params, state of who called subprogram, state of the new subprogram
+addParameters :: [Expr] -> [Declaration] -> OWLState -> OWLState -> IO OWLState
+addParameters [] [] state1 state2 = do return state2
+addParameters args [] s1 s2 = do 
 	fail "Too many arguments."
-addParameters [] params s = do 
+addParameters [] params s1 s2 = do 
 	fail "Too few arguments."
-addParameters (a:args) (h:params) state1 = do 
+addParameters (a:args) (h:params) state1 newState1 = do 
 	let t1 = getDecType h
 	let name = getDecName h
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
-	let state3 = addVarDec name t1 state2
-	scopeID <- getScopeID name state3
-	let state4 = updateVar v (name, scopeID) state3
-	addParameters args params state4
+	let newState2 = addVarDec name t1 newState1
+	scopeID <- getScopeID name newState2
+	let newState3 = updateVar v (name, scopeID) newState2
+	addParameters args params state2 newState3
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
@@ -227,7 +228,6 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
 
-	
 -- TODO: Criar pros outros tipos aqui.
 runStatement (Assignment (AssignVar name) assign) state1 = do -- minha versão está dando erro de tipo
 	scopeID <- getScopeID name state1
