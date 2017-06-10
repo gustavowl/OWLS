@@ -28,7 +28,6 @@ callMain args (Function name params ret body) state1 = do
 	let state2 = newScope 0 state1
 	state3 <- addParameters args params state2
 	(state4, v) <- runFuncBody name body ret state3
-	print state4
 	let ret = f v where
 		f (NumberValue n) = round n
 		f _ = 0
@@ -208,6 +207,7 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
 
+	
 -- TODO: Criar pros outros tipos aqui.
 runStatement (Assignment (AssignVar name) assign) state1 = do -- minha versão está dando erro de tipo
 	scopeID <- getScopeID name state1
@@ -223,11 +223,18 @@ printValue _ (BoolValue b) = do
 printValue _ (CharValue c) = do
 	putChar c
 printValue (AtomicType "real") (NumberValue d) = do
-	print d
+	putStr $ (show d)
 printValue _ (NumberValue d) = do
-	print (round d)
-printValue _ v = do
-	print v
+	putStr $ (show (round d))
+printValue t (ArrayValue l e) = do
+	printValueArray t l e 
+
+printValueArray t l (e: e1) = do
+	printValue t e  
+	if l > 1 then
+		printValueArray t (l - 1) e1
+	else
+		putStr "" 
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations

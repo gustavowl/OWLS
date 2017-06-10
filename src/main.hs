@@ -1,12 +1,16 @@
 import Text.ParserCombinators.Parsec
-import System.IO
 import qualified Parser
 import qualified Interpreter
 
+import System.Environment
+import System.IO
+
 main :: IO() 
 main = do
-  s <- getContents
-  parseProgram s
+  	args <- getArgs
+  	fileText <- openFile (args !! 0) ReadMode
+  	s <- hGetContents fileText
+  	parseProgram s
 
 parseProgram :: String -> IO()
 parseProgram input = case 
