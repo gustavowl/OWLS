@@ -134,6 +134,21 @@ runIfElseBody (s:stmts) state = do
 		f (state1, Continue) = (runIfElseBody stmts state1)
 		f _ = fail "Error in block (if else)."
 
+runWhileBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+--when finishes running while loop; try running it again
+runWhileBody [] state = do return (state, Continue) 
+runWhileBody (s:stmts) state = do --executes next statement
+	runStatement s state >>= f where
+		f (state1, Return expr) = do return (state1, Return expr)
+		f (state1, Continue) = (runWhileBody stmts state1)
+		f (state1, BreakCall) = do return (state1, BreakCall)
+	--TODO stop when break
+
+runWhileEvalResult :: Expr -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
+runWhileEvalResult expr body state Continue = (runStatement (While expr body) state) --iterate once
+runWhileEvalResult _ _ state (Return expr) = do return (state, Return expr) --returns from function
+runWhileEvalResult _ _ state (BreakCall) = do return (state, BreakCall) --forces loop stop
+
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
 -- Declarations.
@@ -165,7 +180,12 @@ runStatement (While expr body) state1 = do
 	(varType, varValue, state2) <- evalExpr expr state1
 	--verifies if type is valid. convertType will throw an error otherwise
 	convertType (AtomicType "bool") varType
-	runWhileBodyRec varValue body state2
+	if varValue == BoolValue True then do
+		(state3, result) <- runWhileBody body state2 --executes body
+		--evaluates result to decide wheter should stop or continue iterating
+		runWhileEvalResult expr body state3 result
+	else do
+		return (state2, Continue)
 	--else just do nothing. will stop running
 
 	--f (state3, a) = do return (state3, Continue) --End of while

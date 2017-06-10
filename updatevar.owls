@@ -1,9 +1,13 @@
+func bla () : int {
+	return 42;
+}
+
 main() {
-	x : int = 10;
+	x : int = 1;
 	y : int = 73;
 	write(x);
-	x = 12 + 2;
-	write(x + y);
+	y = bla();
+	write(x);
 	
 	return 10 + 50 * 2 - 5;
 }
