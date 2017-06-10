@@ -87,6 +87,8 @@ tokens :-
   break                                { \p s -> newToken p Break}
   read                                 { \p s -> newToken p Read}
   write                                { \p s -> newToken p Write}
+  array                                { \p s -> newToken p Array}
+  sizeof                               { \p s -> newToken p Sizeof}
   const                                { \p s -> newToken p Const}
   $digit+                              { \p s -> newToken p (Nat (read s))}
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
@@ -109,6 +111,8 @@ data TokenSymbol =
   Proc |
   Read |
   Write |
+  Array |
+  Sizeof |
   Colon   |
   SemiColon |
   Comma |

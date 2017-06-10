@@ -1,0 +1,12 @@
+
+func conc(n1 : nat, s1 : char[n1], n2 : nat, s2 : char[n2]) : char[n1 + n2] {
+	return s1; # TODO
+}
+
+main() {
+	x : char = 'a';
+	s1 : char[10];
+	s2 : char[10];
+	write(conc(10, s1, 10, s2));
+	return 0;
+}

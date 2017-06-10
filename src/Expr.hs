@@ -14,15 +14,15 @@ parseExpr :: OWLParser Expr
 parseExpr = parseBoolExpr
 
 parseExprLeaf :: OWLParser Expr
-parseExprLeaf = (try parseFuncCall)
+parseExprLeaf = (try parseChar)
+	<|> (try parseArray)
+	<|> (try parseString)
+	<|> (try parseFuncCall)
 	<|> (try parseReadCall)
-	<|> (try parseArrayEl)
 	<|> (try parsePtr)
+	<|> (try parseArrayEl)
 	<|> (try parseField)
 	<|> (try parseID)
-	<|> (try parseChar)
-	<|> (try parseStuffArray)
-	<|> (try parseStuffString)
 	<|> (parens parseExpr)
 
 ---------------------------------------------------------------------------------------------------
@@ -47,11 +47,28 @@ parseReadCall = do
 	rparen
 	return $ ReadCall
 
+parseSizeofCall :: OWLParser Expr
+parseSizeofCall = do
+	sizeofToken
+	expr <- parens parseExpr
+	return $ SizeofCall expr
+
+parseArrayCall :: OWLParser Expr
+parseArrayCall = do
+	arrayToken
+	args <- parens $ sepBy1 parseExpr comma
+	return $ ArrayCall args 
+
 parseArrayEl :: OWLParser Expr
 parseArrayEl = do
 	array <- parseID <|> (parens parseExpr)
-	size <- brackets parseExpr
-	return $ ArrayEl array size
+	indexes <- many1 (brackets parseExpr)
+	return $ multiArrayEl array indexes
+
+multiArrayEl :: Expr -> [Expr] -> Expr
+multiArrayEl array [] = array
+--multiArrayEl array (i:indexes) = ArrayEl (multiArrayEl array indexes) i
+multiArrayEl array (i:indexes) = multiArrayEl (ArrayEl array i) indexes
 
 parseField :: OWLParser Expr
 parseField = do
@@ -70,19 +87,18 @@ parsePtr = do
 -- General Literals
 ---------------------------------------------------------------------------------------------------
 
-
 parseChar :: OWLParser Expr
 parseChar = do
 	s <- cchar
 	return $ CharLit s
 
-parseStuffArray :: OWLParser Expr
-parseStuffArray = do
-	exprs <- braces (sepBy parseExpr comma)
+parseArray :: OWLParser Expr
+parseArray = do
+	exprs <- braces (sepBy1 parseExpr comma)
 	return $ ArrayLit exprs
 
-parseStuffString :: OWLParser Expr
-parseStuffString = do
+parseString :: OWLParser Expr
+parseString = do
 	s <- sstring
 	return $ ArrayLit $ stringToArray s
 

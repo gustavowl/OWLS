@@ -7,7 +7,6 @@ import qualified ProgramTree as P
 import Tokens
 
 type TokenParser = P.OWLParser TokenSymbol
-type IDParser = P.OWLParser String
 type NumParser = P.OWLParser Double
 type BoolParser = P.OWLParser Bool
 type CharParser = P.OWLParser Char
@@ -65,6 +64,12 @@ readToken = tokenPrim show updatePos (simpleGetToken Read)
 
 writeToken :: TokenParser
 writeToken = tokenPrim show updatePos (simpleGetToken Write)
+
+arrayToken :: TokenParser
+arrayToken = tokenPrim show updatePos (simpleGetToken Array)
+
+sizeofToken :: TokenParser
+sizeofToken = tokenPrim show updatePos (simpleGetToken Sizeof)
 
 ---------------------------------------------------------------------------------------------------
 -- Characters / symbols
@@ -220,7 +225,7 @@ sstring = tokenPrim show updatePos getToken where
 	getToken (Token (SString s) l c) = Just s
 	getToken _ = Nothing
 
-identifier :: IDParser
+identifier :: StringParser
 identifier = tokenPrim show updatePos getToken where
 	getToken (Token (Id s) l c) = Just s
 	getToken _ = Nothing

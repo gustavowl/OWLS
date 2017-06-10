@@ -35,14 +35,14 @@ callMain args (Function name params ret body) state1 = do
 	return ret
 callMain _ _ _ = do return 0
 
-callFunction :: Key -> [Expr] -> OWLState -> IO (OWLState, VarType, VarValue)
+callFunction :: Key -> [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
 callFunction (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, retType, body) <- getFuncInfo name t v
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state2
 	(state4, value) <- runFuncBody name body retType state3
-	return (state4, retType, value)
+	return (retType, value, popScope state4)
 
 callProcedure :: Key -> [Expr] -> OWLState -> IO OWLState
 callProcedure (name, scopeID) args state1 = do
@@ -50,15 +50,20 @@ callProcedure (name, scopeID) args state1 = do
 	(parentID, params, body) <- getProcInfo name t v
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state2
-	runProcBody name body state3 >>= return
+	state4 <- runProcBody name body state3
+	return $ popScope state4
 
 addParameters :: [Expr] -> [Declaration] -> OWLState -> IO OWLState
 addParameters [] [] state = do return state
+addParameters args [] s = do 
+	fail "Too many arguments."
+addParameters [] params s = do 
+	fail "Too few arguments."
 addParameters (a:args) ((Var name t1 expr):params) state1 = do 
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
 	let state3 = addVarDec name t1 state2
-	let scopeID = getScopeID name state3
+	scopeID <- getScopeID name state3
 	let state4 = updateVar v (name, scopeID) state3
 	addParameters args params state4
 addParameters (a:args) ((Function name p ret body):params) state1 = do 
@@ -66,7 +71,7 @@ addParameters (a:args) ((Function name p ret body):params) state1 = do
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
 	let state3 = addVarDec name t1 state2
-	let scopeID = getScopeID name state3
+	scopeID <- getScopeID name state3
 	let state4 = updateVar v (name, scopeID) state3
 	addParameters args params state4
 addParameters (a:args) ((Procedure name p body):params) state1 = do 
@@ -74,11 +79,9 @@ addParameters (a:args) ((Procedure name p body):params) state1 = do
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
 	let state3 = addVarDec name t1 state2
-	let scopeID = getScopeID name state3
+	scopeID <- getScopeID name state3
 	let state4 = updateVar v (name, scopeID) state3
 	addParameters args params state4
-
-addParameters r f s = fail "Error in adding parameter"
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
@@ -196,30 +199,32 @@ runStatement Break state = do
 
 -- General statements. (TODO)
 runStatement (ProcCall name args) state1 = do
-	let scopeID = getScopeID name state1
+	scopeID <- getScopeID name state1
 	state2 <- callProcedure (name, scopeID) args state1
 	return (state2, Continue)
 
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
-	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
+	printValue t v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
 runStatement (Assignment name assign) state1 = do -- minha versão está dando erro de tipo
-	let scope = getScopeID name state1
-	let (varTypeAssign, _) = getVar (name, scope) state1
+	scopeID <- getScopeID name state1
+	let (varTypeAssign, _) = getVar (name, scopeID) state1
 	(varType, value, state2) <- evalExpr assign state1
 	-- TODO verificar tipo varType x varTypeAssign 
-	let state3 = updateVar value (name, scope) state2
+	let state3 = updateVar value (name, scopeID) state2
 	return (state3, Continue)
 
-printValue :: VarValue -> IO()
-printValue (BoolValue b) = do
-	print b
-printValue (CharValue c) = do
-	print c
-printValue (NumberValue d) = do
+printValue :: VarType -> VarValue -> IO()
+printValue _ (BoolValue b) = do
+	putStr (show b)
+printValue _ (CharValue c) = do
+	putChar c
+printValue (AtomicType "real") (NumberValue d) = do
 	print d
-printValue v = do
+printValue _ (NumberValue d) = do
+	print (round d)
+printValue _ v = do
 	print v
 
 ---------------------------------------------------------------------------------------------------
@@ -232,7 +237,7 @@ addDec (Var name varType (Just e)) state1 = do
 	(actualType, value, state2) <- evalExpr e state1
 	convertType varType actualType
 	let state3 = addVarDec name varType state2
-	let scopeID = getScopeID name state3
+	scopeID <- getScopeID name state3
 	return $ updateVar value (name, scopeID) state3
 
 addDec (Function name params ret body) state = do
@@ -264,9 +269,6 @@ evalNumExpr expr state1 = do
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
 
-convertArrayCharToExpr :: [Char] -> VarValue
-convertArrayCharToExpr arrayChar = ArrayValue [] -- TODO
-
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
@@ -276,22 +278,34 @@ evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
 -- Variable.
 evalExpr (ID name) state = do
-	let scopeID = getScopeID name state
+	scopeID <- getScopeID name state
 	let (t, v) = getVar (name, scopeID) state
 	return (t, v, state)
 
 -- Funcion call.
 evalExpr (FuncCall name args) state1 = do
-	let scopeID = getScopeID name state1
-	(state2, t, v) <- callFunction (name, scopeID) args state1
+	scopeID <- getScopeID name state1
+	(t, v, state2) <- callFunction (name, scopeID) args state1
 	return (t, v, state2)
 
 -- Read call.
 evalExpr (ReadCall) state = do
 	line <- getLine
 	let expr = convertArrayCharToExpr line
-	let size = NatLit $ (fromIntegral (length line)) + 0.0
-	return (ArrayType (AtomicType "char") size, expr, state)
+	return (ArrayType (AtomicType "char"), expr, state)
+
+-- Array call.
+evalExpr (ArrayCall exprs) state = do
+	-- TODO: criar array multidimensional
+	-- exprs[0] -> elemento inicial da array
+	-- exprs[1..n] -> tamanho de cada dimensão da array (n=1 se for array comum)
+	-- inferir o tipo da array de acordo com o elemento inicial
+	return (nullVarType, nullVarValue, state)
+
+evalExpr (SizeofCall expr) state1 = do
+	(t, array, state2) <- evalExpr expr state1
+	let size = 0 -- TODO: pegar tamanho da array
+	return (AtomicType "nat", NumberValue size, state2)
 
 -- TODO: array element, pointer, field
 
@@ -314,8 +328,9 @@ evalExpr (RealLit n) state = do
 evalExpr (CharLit c) state = do
 	return (AtomicType "char", CharValue c, state)
 
-evalExpr (ArrayLit n) state = do
-	return (AtomicType "nat", NumberValue 0, state) -- TODO: calcular cada elemento da array
+evalExpr (ArrayLit els) state = do
+	result <- createUntypedArrayValue els state
+	return result
 
 ---------------------------------------------------------------------------------------------------
 -- Evaluate Boolean Operators
@@ -456,6 +471,28 @@ evalExpr (NumMod expr1 expr2) state1 = do
 	else
 		return $ numToExpr "nat" (mod' val1 val2) state3
 
+---------------------------------------------------------------------------------------------------
+-- Auxiliary
+--------------------------------------------------------------------------------------------------
+
+convertArrayCharToExpr :: [Char] -> VarValue
+convertArrayCharToExpr arrayChar = ArrayValue 0 [] -- TODO
+
+createUntypedArrayValue :: [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
+createUntypedArrayValue [] state = do fail "Cannot create empty array."
+createUntypedArrayValue (h:t) state1 = do
+	(typ, expr, state2) <- evalExpr h state1
+	(exprs, state3) <- createArrayValues t typ state2
+	let size = 1 + (toInteger (length t))
+	return (typ, ArrayValue size (expr:exprs), state3)
+
+createArrayValues :: [Expr] -> VarType -> OWLState -> IO ([VarValue], OWLState)
+createArrayValues [] typ state = do return ([], state)
+createArrayValues (h:t) typ1 state1 = do
+	(typ2, expr, state2) <- evalExpr h state1
+	convertType typ1 typ2
+	(exprs, state3) <- createArrayValues t typ1 state2
+	return (expr:exprs, state3)
 
 ---------------------------------------------------------------------------------------------------
 -- Check Errors Functions
@@ -466,3 +503,4 @@ errorType (AtomicType "nat") = "nat"
 errorType (AtomicType "int") = "int"
 errorType (AtomicType "real") = "real"
 errorType (AtomicType "char") = "char"
+

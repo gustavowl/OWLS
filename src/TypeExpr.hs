@@ -7,7 +7,7 @@ import Expr
 
 parseVarType :: OWLParser VarType
 parseVarType = try parsePointerType 
-	<|> try parseArrayType 
+	<|> try parseArrayType
 	<|> try parseFuncType 
 	<|> try parseProcType 
 	<|> parseAtomicType
@@ -23,14 +23,24 @@ parseAtomicType = do
 parsePointerType :: OWLParser VarType
 parsePointerType = do
 	atToken
-	t <- parseTypeLeaf
+	t <- parseTypeLeaf 
 	return $ PointerType t
 
 parseArrayType :: OWLParser VarType
 parseArrayType = do
 	t <- parseTypeLeaf
-	size <- brackets parseExpr
-	return $ ArrayType t size
+	d <- many1 parseEmptyBrackets
+	return $ multiArray t d
+
+parseEmptyBrackets :: OWLParser ()
+parseEmptyBrackets = do
+	lbrace
+	rbrace
+	return ()
+
+multiArray :: VarType -> [()] -> VarType
+multiArray typ [] = typ
+multiArray typ (_:t) = ArrayType $ multiArray typ t
 
 parseFuncType :: OWLParser VarType
 parseFuncType = do

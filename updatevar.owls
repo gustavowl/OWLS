@@ -8,6 +8,7 @@ main() {
 	write(x);
 	y = bla();
 	write(x);
+	write(y);
 	
 	return 10 + 50 * 2 - 5;
 }

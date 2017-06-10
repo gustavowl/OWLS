@@ -42,6 +42,8 @@ data Expr = BoolLit Bool
 	| ArrayEl Expr Expr
 	| FuncCall String [Expr]
 	| ReadCall
+	| ArrayCall [Expr]
+	| SizeofCall Expr
 	| Field Expr String
 	| Ptr Expr
 	| BoolNot Expr
@@ -64,7 +66,7 @@ data Expr = BoolLit Bool
 	deriving (Eq,Show)
 
 data VarType = AtomicType String 
-	| ArrayType VarType Expr
+	| ArrayType VarType
 	| PointerType VarType
 	| FuncType [VarType] VarType -- params, retorno
 	| ProcType [VarType]

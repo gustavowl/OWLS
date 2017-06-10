@@ -22,7 +22,7 @@ type TableEntry = (String, VarType, VarValue)
 -- Description of variable value (primitive, struct or array)
 data VarValue = NumberValue Double 
 	| UserValue [VarValue] 
-	| ArrayValue [VarValue]
+	| ArrayValue Integer [VarValue]
 	| PointerValue Key
 	| CharValue Char
 	| BoolValue Bool
@@ -47,7 +47,7 @@ nullVarType :: VarType
 nullVarType = AtomicType "NULL"
 
 nullVarValue :: VarValue
-nullVarValue = NumberValue 123456
+nullVarValue = NumberValue 12345666
 
 ---------------------------------------------------------------------------------------------------
 -- Symbol Table Access
@@ -67,8 +67,14 @@ getScope scopeID (stack, _) = f (popToScope scopeID stack) where
 	f [] = nullScope
 	f (h:t) = h
 
-getScopeID :: String -> OWLState -> Integer
-getScopeID name (stack, _) = searchVarScope name stack
+getScopeID :: String -> OWLState -> IO Integer
+getScopeID name (stack, _) = do
+	let id = searchVarScope name stack
+	if id == -1 then do
+		print stack
+		fail $ "Variable " ++ name ++ " not found."
+	else
+		return id
 
 searchVarScope :: String -> [Scope] -> Integer
 searchVarScope name [] = -1
@@ -93,6 +99,10 @@ isInScope name ((varName, _, _):t) =
 		True 
 	else 
 		isInScope name t
+
+popScope :: OWLState -> OWLState
+popScope (h:t, types) = (t, types)
+popScope a = a -- Should not happen.
 
 ---------------------------------------------------------------------------------------------------
 -- Table
@@ -241,6 +251,6 @@ getInitValue (AtomicType "char") = CharValue 'a'
 getInitValue (AtomicType "bool") = BoolValue False
 getInitValue (AtomicType _) = UserValue [] -- TODO: initialize each field
 getInitValue (PointerType _) = PointerValue ("", 0)
-getInitValue (ArrayType _ n) = ArrayValue [] -- TODO: initialize each element
+getInitValue (ArrayType _) = ArrayValue 0 []
 getInitValue (FuncType _ _) = FuncValue (-1) [] []
 getInitValue (ProcType _) = ProcValue (-1) [] []
