@@ -228,7 +228,7 @@ printValue t (ArrayValue l e) = do
 	printValueArray t l e 
 
 printValueArray t l (e: e1) = do
-	printValue t e  --Faltar percorrer a lista para imprimir 
+	printValue t e  
 	if l > 1 then
 		printValueArray t (l - 1) e1
 	else
