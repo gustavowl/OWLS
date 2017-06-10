@@ -111,7 +111,7 @@ popScope a = a -- Should not happen.
 addVarDec :: String -> VarType -> OWLState -> OWLState
 addVarDec name varType ([], types) = ([], types)
 addVarDec name varType ((a, b, table):scopes, types) = let
-	newElement = (name, varType, getInitValue varType) in
+	newElement = (name, varType, (getInitValue varType types)) in
 	((a, b, newElement:table):scopes, types)
 
 updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry] 
@@ -234,7 +234,15 @@ canConvertType a b = a == b
 
 -- TODO
 -- ...
+getDecType :: Declaration -> VarType
+getDecType (Var name t expr) = t
+getDecType (Function name p ret body) = (FuncType (extractParamTypes p) ret)
+getDecType (Procedure name p body) = (ProcType (extractParamTypes p))
 
+getDecName :: Declaration -> String
+getDecName (Var name t expr) = name
+getDecName (Function name p ret body) = name
+getDecName (Procedure name p body) = name
 ---------------------------------------------------------------------------------------------------
 -- Initial Values
 ---------------------------------------------------------------------------------------------------
@@ -243,14 +251,26 @@ canConvertType a b = a == b
 initState :: [UserType] -> OWLState
 initState types = ([(0, -1, [])], types)
 
-getInitValue :: VarType -> VarValue
-getInitValue (AtomicType "nat") = NumberValue 0
-getInitValue (AtomicType "int") = NumberValue 0
-getInitValue (AtomicType "real") = NumberValue 0
-getInitValue (AtomicType "char") = CharValue 'a'
-getInitValue (AtomicType "bool") = BoolValue False
-getInitValue (AtomicType _) = UserValue [] -- TODO: initialize each field
-getInitValue (PointerType _) = PointerValue ("", 0)
-getInitValue (ArrayType _) = ArrayValue 0 []
-getInitValue (FuncType _ _) = FuncValue (-1) [] []
-getInitValue (ProcType _) = ProcValue (-1) [] []
+getUserType :: String -> [UserType] -> UserType
+getUserType name1 ((name2, decs):types) = 
+	if name1 == name2 then (name2, decs) else getUserType name1 types
+
+initEachField :: [Declaration] -> [UserType] -> [VarValue]
+initEachField [] types = []
+initEachField (h:decs) types = 
+	let t = getDecType h in (getInitValue t types) : initEachField decs types
+
+getInitValue :: VarType -> [UserType] -> VarValue
+getInitValue (AtomicType "nat") _ = NumberValue 0
+getInitValue (AtomicType "int") _ = NumberValue 0
+getInitValue (AtomicType "real") _ = NumberValue 0
+getInitValue (AtomicType "char") _ = CharValue 'a'
+getInitValue (AtomicType "bool") _ = BoolValue False
+getInitValue (AtomicType name) types = do
+	let (_, decs) = (getUserType name types)
+	let vars = (initEachField decs types)
+	(UserValue vars)
+getInitValue (PointerType _) _ = PointerValue ("", 0)
+getInitValue (ArrayType _) _ = ArrayValue 0 []
+getInitValue (FuncType _ _) _ = FuncValue (-1) [] []
+getInitValue (ProcType _ ) _ = ProcValue (-1) [] []

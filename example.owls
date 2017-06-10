@@ -38,6 +38,7 @@ main() {
 	write(bla(12));
 	if (a != x) {
 		write(a + 10000);
+		write('\n');
 		x = bla42() + 17 + bla42();
 		write(x);
 		ble();
@@ -48,6 +49,7 @@ main() {
 	while (x < 20) {
 		x = bla(x);
 		write(x);
+		write('\n');
 		if (x > 17) {
 			write(2112);
 			break;

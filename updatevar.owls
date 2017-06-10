@@ -6,9 +6,11 @@ main() {
 	x : int = 1;
 	y : int = 73;
 	write(x);
+	write('\n');
 	y = bla();
 	write(x);
+	write('\n');
 	write(y);
-	
+	write('\n');
 	return 10 + 50 * 2 - 5;
 }

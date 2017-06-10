@@ -4,7 +4,13 @@ struct fracao {
 	b : nat = 1;
 }
 
+struct lpcp {
+	drama : int;
+	choro : real;
+}
+
 x : fracao;
+zzz : lpcp;
 
 func soma(x : fracao, y : int) : int {
 	x.a = x.a + y * x.b;

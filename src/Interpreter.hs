@@ -58,23 +58,9 @@ addParameters args [] s = do
 	fail "Too many arguments."
 addParameters [] params s = do 
 	fail "Too few arguments."
-addParameters (a:args) ((Var name t1 expr):params) state1 = do 
-	(t2, v, state2) <- evalExpr a state1
-	convertType t1 t2
-	let state3 = addVarDec name t1 state2
-	scopeID <- getScopeID name state3
-	let state4 = updateVar v (name, scopeID) state3
-	addParameters args params state4
-addParameters (a:args) ((Function name p ret body):params) state1 = do 
-	let t1 = FuncType (extractParamTypes p) ret
-	(t2, v, state2) <- evalExpr a state1
-	convertType t1 t2
-	let state3 = addVarDec name t1 state2
-	scopeID <- getScopeID name state3
-	let state4 = updateVar v (name, scopeID) state3
-	addParameters args params state4
-addParameters (a:args) ((Procedure name p body):params) state1 = do 
-	let t1 = ProcType (extractParamTypes p)
+addParameters (a:args) (h:params) state1 = do 
+	let t1 = getDecType h
+	let name = getDecName h
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
 	let state3 = addVarDec name t1 state2
@@ -150,7 +136,8 @@ runWhileBody (s:stmts) state = do --executes next statement
 runWhileEvalResult :: Expr -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
 runWhileEvalResult expr body state Continue = (runStatement (While expr body) state) --iterate once
 runWhileEvalResult _ _ state (Return expr) = do return (state, Return expr) --returns from function
-runWhileEvalResult _ _ state (BreakCall) = do return (state, Continue) --forces loop stop, But keeps running parent block
+runWhileEvalResult _ _ state (BreakCall) = do return (state, Continue) 
+--forces loop stop, But keeps running parent block
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
