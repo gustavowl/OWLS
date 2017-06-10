@@ -207,7 +207,9 @@ runStatement (WriteCall expr) state1 = do
 	(t, v, state2) <- evalExpr expr state1
 	printValue t v -- Ver printValue (note que falta definir como imprimir alguns tipos)
 	return (state2, Continue)
-runStatement (Assignment name assign) state1 = do -- minha versão está dando erro de tipo
+
+-- TODO: Criar pros outros tipos aqui.
+runStatement (Assignment (AssignVar name) assign) state1 = do -- minha versão está dando erro de tipo
 	scopeID <- getScopeID name state1
 	let (varTypeAssign, _) = getVar (name, scopeID) state1
 	(varType, value, state2) <- evalExpr assign state1

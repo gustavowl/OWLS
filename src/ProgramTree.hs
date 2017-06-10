@@ -24,7 +24,7 @@ data Statement = VarDec Declaration
 	| ProcRet
 	| ProcCall String [Expr]
 	| WriteCall Expr
-	| Assignment String Expr
+	| Assignment AssignKey Expr
 	| If Expr [Statement] [Statement]
 	| While Expr [Statement]
 	| For Declaration Expr Statement [Statement]
@@ -70,6 +70,11 @@ data VarType = AtomicType String
 	| PointerType VarType
 	| FuncType [VarType] VarType -- params, retorno
 	| ProcType [VarType]
+	deriving (Eq,Show)
+
+data AssignKey = AssignVar String
+	| AssignEl AssignKey Expr
+	| AssignField AssignKey String
 	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------

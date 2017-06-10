@@ -120,12 +120,20 @@ parseSemi parser = do
 	semi
 	return s
 
+---------------------------------------------------------------------------------------------------
+-- Declarations
+---------------------------------------------------------------------------------------------------
+
 parseDecStatement :: OWLParser Statement
 parseDecStatement = do
 	parseDeclaration >>= f where
 		f (Var n t v) = return $ VarDec (Var n t v)
 		f (Function n p r b) = return $ FuncDec (Function n p r b)
 		f (Procedure n p b) = return $ ProcDec (Procedure n p b)
+
+---------------------------------------------------------------------------------------------------
+-- Procedure
+---------------------------------------------------------------------------------------------------
 
 parseProcCall :: OWLParser Statement
 parseProcCall = do
@@ -139,6 +147,10 @@ parseWriteCall = do
 	arg <- parens parseExpr
 	return $ WriteCall arg
 
+---------------------------------------------------------------------------------------------------
+-- Return
+---------------------------------------------------------------------------------------------------
+
 parseProcRet :: OWLParser Statement
 parseProcRet = do
 	returnToken
@@ -150,12 +162,45 @@ parseFuncRet = do
 	expr <- parseExpr
 	return $ FuncRet expr
 
+---------------------------------------------------------------------------------------------------
+-- Assignment
+---------------------------------------------------------------------------------------------------
+
 parseAssignment :: OWLParser Statement
 parseAssignment = do
-	name <- identifier
+	var <- parseAssignKey
 	assignToken
 	expr <- parseExpr
-	return $ Assignment name expr
+	return $ Assignment var expr
+
+parseAssignKey :: OWLParser AssignKey
+parseAssignKey = (try parseAssignField) <|> (try parseAssignEl) <|> parseAssignVar
+
+parseAssignVar :: OWLParser AssignKey
+parseAssignVar = do
+	name <- identifier
+	return $ AssignVar name
+
+parseAssignEl :: OWLParser AssignKey
+parseAssignEl = do
+	var <- parseAssignVar <|> (parens parseAssignKey)
+	indexes <- many1 (brackets parseExpr)
+	return $ indexesToKey var indexes
+
+indexesToKey :: AssignKey -> [Expr] -> AssignKey
+indexesToKey key [] = key
+indexesToKey key (a:b) = indexesToKey (AssignEl key a) b
+
+parseAssignField :: OWLParser AssignKey
+parseAssignField = do
+	var <- parseAssignVar <|> (parens parseAssignKey)
+	dotToken
+	name <- identifier
+	return $ AssignField var name 
+
+---------------------------------------------------------------------------------------------------
+-- Control Flow
+---------------------------------------------------------------------------------------------------
 
 parseCondition :: OWLParser Statement
 parseCondition = do
