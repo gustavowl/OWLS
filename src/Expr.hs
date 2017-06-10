@@ -20,6 +20,9 @@ parseExprLeaf = (try parseFuncCall)
 	<|> (try parsePtr)
 	<|> (try parseField)
 	<|> (try parseID)
+	<|> (try parseChar)
+	<|> (try parseStuffArray)
+	<|> (try parseStuffString)
 	<|> (parens parseExpr)
 
 ---------------------------------------------------------------------------------------------------
@@ -66,6 +69,7 @@ parsePtr = do
 ---------------------------------------------------------------------------------------------------
 -- General Literals
 ---------------------------------------------------------------------------------------------------
+
 
 parseChar :: OWLParser Expr
 parseChar = do
