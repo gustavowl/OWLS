@@ -41,6 +41,7 @@ tokens :-
   main                                 { \p s -> newToken p Main }
   func                                 { \p s -> newToken p Func }
   proc                                 { \p s -> newToken p Proc }
+  struct                               { \p s -> newToken p Struct }
   ":"                                  { \p s -> newToken p Colon }
   ";"                                  { \p s -> newToken p SemiColon }
   ","                                  { \p s -> newToken p Comma }
@@ -90,6 +91,7 @@ tokens :-
   $digit+                              { \p s -> newToken p (Nat (read s))}
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
+  "."                                  { \p s -> newToken p Dot}
   $alpha [$alpha $digit \_ \']*        { \p s -> newToken p (Id s)}
   \" @string* \"                       { \p s -> newToken p (SString (read s))}
   \' @string? \'                       { \p s -> newToken p (CChar (read s))}
@@ -133,6 +135,7 @@ data TokenSymbol =
   Greater    |
   LessEq |
   GreaterEq |
+  Dot |
   At |
   Dollar |
   If  |
@@ -143,6 +146,7 @@ data TokenSymbol =
   Case   |
   Return |
   Break  |
+  Struct |
   Const |
   Bool Bool |
   Id String |

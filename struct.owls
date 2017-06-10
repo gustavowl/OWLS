@@ -1,0 +1,18 @@
+
+struct fracao {
+	a : int = 0;
+	b : nat = 1;
+}
+
+x : fracao;
+y : fracao;
+
+func soma(x : fracao, y : int) : fracao {
+	#x.a = x.a + y * x.b;
+	return x;
+}
+
+main () {
+	y : int = 2;
+	return soma(x, y);
+}

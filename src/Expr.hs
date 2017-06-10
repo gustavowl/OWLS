@@ -11,168 +11,114 @@ import qualified Tokens
 ---------------------------------------------------------------------------------------------------
 
 parseExpr :: OWLParser Expr
-parseExpr = (try parseNumExpr) 
-	<|> (try parseBoolExpr) 
-	<|> parseStuffExpr
+parseExpr = parseBoolExpr
+
+parseExprLeaf :: OWLParser Expr
+parseExprLeaf = (try parseFuncCall)
+	<|> (try parseReadCall)
+	<|> (try parseArrayEl)
+	<|> (try parsePtr)
+	<|> (try parseField)
+	<|> (try parseID)
+	<|> (try parseChar)
+	<|> (try parseStuffArray)
+	<|> (try parseStuffString)
+	<|> (parens parseExpr)
 
 ---------------------------------------------------------------------------------------------------
--- Numeric Expr
+-- General Leaf
 ---------------------------------------------------------------------------------------------------
 
-parseNumExpr :: OWLParser Expr
-parseNumExpr = do
-	expr <- parseNumNode
-	return $ NumExpr expr
-
-parseNumNode :: OWLParser NumNode
-parseNumNode = parseAddChain
-
-parseNumLeaf :: OWLParser NumNode
-parseNumLeaf = (try parseNumUnary)
-	<|> (try parseNumber)
-	<|> (try (parens parseNumNode))
-	<|> (try parseNumFuncCall)
-	<|> (try parseNumEl)
-	<|> parseNumID
-
----------------------------------------------------------------------------------------------------
--- Numeric Leaf Terms
----------------------------------------------------------------------------------------------------
-
-parseNumID :: OWLParser NumNode
-parseNumID = do
+parseID :: OWLParser Expr
+parseID = do
 	name <- identifier
-	return $ NumID name
+	return $ ID name
 
-parseNumEl :: OWLParser NumNode
-parseNumEl = do
-	(array, size) <- parseArrayEl
-	return $ NumEl array size
+parseFuncCall :: OWLParser Expr
+parseFuncCall = do
+	func <- identifier
+	args <- parens $ sepBy parseExpr comma
+	return $ FuncCall func args
 
-parseNumFuncCall :: OWLParser NumNode
-parseNumFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ NumFuncCall name args
+parseReadCall :: OWLParser Expr
+parseReadCall = do
+	readToken
+	lparen
+	rparen
+	return $ ReadCall
 
----------------------------------------------------------------------------------------------------
--- Numeric Literal Leaf Terms
----------------------------------------------------------------------------------------------------
+parseArrayEl :: OWLParser Expr
+parseArrayEl = do
+	array <- parseID <|> (parens parseExpr)
+	size <- brackets parseExpr
+	return $ ArrayEl array size
 
-parseNumber :: OWLParser NumNode
-parseNumber = parseNatural <|> parseInteger <|> parseReal
+parseField :: OWLParser Expr
+parseField = do
+	struct <- parseID <|> (parens parseExpr)
+	dotToken
+	field <- identifier
+	return $ Field struct field
 
-parseNatural :: OWLParser NumNode
-parseNatural = do
-	n <- natural
-	return $ NumNat n
-
-parseInteger :: OWLParser NumNode
-parseInteger = do
-	n <- integer
-	return $ NumInt n
-
-parseReal :: OWLParser NumNode
-parseReal = do
-	n <- real
-	return $ NumReal n
-
----------------------------------------------------------------------------------------------------
--- Numeric Unary Operators
----------------------------------------------------------------------------------------------------
-
-parseNumUnary :: OWLParser NumNode
-parseNumUnary = parseMinus
-
-parseMinus :: OWLParser NumNode
-parseMinus = do
-	op <- minusToken
-	expr <- parseNumLeaf
-	return $ NumMinus expr
+parsePtr :: OWLParser Expr
+parsePtr = do
+	atToken
+	ptr <- parseID <|> (parens parseExpr)
+	return $ Ptr ptr
 
 ---------------------------------------------------------------------------------------------------
--- Numeric Binary Operators
+-- General Literals
 ---------------------------------------------------------------------------------------------------
 
-parseAddChain :: OWLParser NumNode
-parseAddChain = (try parseAddChainTail) <|> (try parseMulChain)
 
-parseAddChainTail :: OWLParser NumNode
-parseAddChainTail = do
-	e1 <- parseMulChain
-	op <- plusToken <|> minusToken
-	e2 <- parseAddChain
-	if op == Tokens.Plus then
-		return $ NumAdd e1 e2
-	else
-		return $ NumSub e1 e2
+parseChar :: OWLParser Expr
+parseChar = do
+	s <- cchar
+	return $ CharLit s
 
-parseMulChain :: OWLParser NumNode
-parseMulChain = (try parseMulChainTail) <|> (try parseNumLeaf)
+parseStuffArray :: OWLParser Expr
+parseStuffArray = do
+	exprs <- braces (sepBy parseExpr comma)
+	return $ ArrayLit exprs
 
-parseMulChainTail :: OWLParser NumNode
-parseMulChainTail = do
-	e1 <- parseNumLeaf
-	op <- timesToken <|> divideToken <|> modulusToken
-	e2 <- parseMulChain
-	if op == Tokens.Times then
-		return $ NumMul e1 e2
-	else if op == Tokens.Divide then
-		return $ NumDiv e1 e2
-	else
-		return $ NumMod e1 e2
+parseStuffString :: OWLParser Expr
+parseStuffString = do
+	s <- sstring
+	return $ ArrayLit $ stringToArray s
+
+stringToArray :: String -> [Expr]  
+stringToArray [] = []  
+stringToArray (x:xs) = (CharLit x) : stringToArray xs
 
 ---------------------------------------------------------------------------------------------------
 -- Boolean Expr
 ---------------------------------------------------------------------------------------------------
 
 parseBoolExpr :: OWLParser Expr
-parseBoolExpr = do
-	expr <- parseBoolNode
-	return $ BoolExpr expr
+parseBoolExpr = parseOrChain
 
-parseBoolNode :: OWLParser BoolNode
-parseBoolNode = parseOrChain
-
-parseBoolLeaf :: OWLParser BoolNode
+parseBoolLeaf :: OWLParser Expr
 parseBoolLeaf = (try parseBoolUnary)
 	<|> (try parseBoolean)
-	<|> (try (parens parseBoolNode))
-	<|> (try parseBoolFuncCall)
-	<|> (try parseBoolEl)
-	<|> parseBoolID
+	<|> parseExprLeaf
 
 ---------------------------------------------------------------------------------------------------
--- Boolean Leaf Terms
+-- Boolean Literal
 ---------------------------------------------------------------------------------------------------
 
-parseBoolean :: OWLParser BoolNode
+parseBoolean :: OWLParser Expr
 parseBoolean = do
 	b <- boolean
 	return $ BoolLit b
-
-parseBoolID :: OWLParser BoolNode
-parseBoolID = do
-	name <- identifier
-	return $ BoolID name
-
-parseBoolEl :: OWLParser BoolNode
-parseBoolEl = do
-	(array, size) <- parseArrayEl
-	return $ BoolEl array size
-
-parseBoolFuncCall :: OWLParser BoolNode
-parseBoolFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ BoolFuncCall name args
 
 ---------------------------------------------------------------------------------------------------
 -- Boolean Unary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseBoolUnary :: OWLParser BoolNode
+parseBoolUnary :: OWLParser Expr
 parseBoolUnary = parseNeg
 
-parseNeg :: OWLParser BoolNode
+parseNeg :: OWLParser Expr
 parseNeg = do
 	notToken
 	n <- parseBoolLeaf
@@ -182,10 +128,10 @@ parseNeg = do
 -- Boolean Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseOrChain :: OWLParser BoolNode
+parseOrChain :: OWLParser Expr
 parseOrChain = (try parseOrChainTail) <|> (try parseAndChain)
 
-parseOrChainTail :: OWLParser BoolNode
+parseOrChainTail :: OWLParser Expr
 parseOrChainTail = do
 	e1 <- parseAndChain
 	op <- orToken <|> corToken
@@ -195,10 +141,10 @@ parseOrChainTail = do
 	else
 		return $ BoolOrC e1 e2
 
-parseAndChain :: OWLParser BoolNode
+parseAndChain :: OWLParser Expr
 parseAndChain = (try parseAndChainTail) <|> (try parseRelational)
 
-parseAndChainTail :: OWLParser BoolNode
+parseAndChainTail :: OWLParser Expr
 parseAndChainTail = do
 	e1 <- parseRelational
 	op <- andToken <|> candToken
@@ -212,10 +158,10 @@ parseAndChainTail = do
 -- Boolean Relational Binary Operators
 ---------------------------------------------------------------------------------------------------
 
-parseRelational :: OWLParser BoolNode
-parseRelational = (try parseRelationalTail) <|> parseBoolLeaf
+parseRelational :: OWLParser Expr
+parseRelational = (try parseRelationalTail) <|> parseNumExpr <|> parseBoolLeaf
 
-parseRelationalTail :: OWLParser BoolNode
+parseRelationalTail :: OWLParser Expr
 parseRelationalTail = do
 	e1 <- parseNumExpr
 	op <- greaterToken <|> greaterEqToken <|> lessToken <|> lessEqToken <|> eqToken <|> difToken
@@ -234,75 +180,80 @@ parseRelationalTail = do
 		return $ BoolLtEq e1 e2
 
 ---------------------------------------------------------------------------------------------------
--- Stuff Expr
+-- Numeric Expr
 ---------------------------------------------------------------------------------------------------
 
-parseStuffExpr :: OWLParser Expr
-parseStuffExpr = do
-	expr <- parseStuffNode
-	return $ StuffExpr expr
+parseNumExpr :: OWLParser Expr
+parseNumExpr = parseAddChain
 
-parseStuffNode :: OWLParser StuffNode
-parseStuffNode = (try parseStuffFuncCall) 
-	<|> (try parseReadCall) 
-	<|> (try parseStuffID) 
-	<|> (try parseStuffChar)
-	<|> (try parseStuffArray)
---	<|> (try parseStuffEl)
-	<|> parseStuffString
-
-parseStuffID :: OWLParser StuffNode
-parseStuffID = do
-	name <- identifier
-	return $ StuffID name
-
-parseStuffEl :: OWLParser StuffNode
-parseStuffEl = do
-	(array, size) <- parseArrayEl
-	return $ StuffEl array size
-
-parseStuffChar :: OWLParser StuffNode
-parseStuffChar = do
-	s <- cchar
-	return $ StuffChar s
-
-parseStuffArray :: OWLParser StuffNode
-parseStuffArray = do
-	exprs <- braces (sepBy parseExpr comma)
-	return $ StuffArray exprs
-
-parseStuffString :: OWLParser StuffNode
-parseStuffString = do
-	s <- sstring
-	return $ StuffArray $ stringToArray s
-
-stringToArray :: String -> [Expr]  
-stringToArray [] = []  
-stringToArray (x:xs) = (StuffExpr (StuffChar x)) : stringToArray xs
-
-parseStuffFuncCall :: OWLParser StuffNode
-parseStuffFuncCall = do
-	(name, args) <- parseFuncCall
-	return $ StuffFuncCall name args
-
-parseReadCall :: OWLParser StuffNode
-parseReadCall = do
-	readToken
-	arg <- parens parseExpr
-	return $ StuffReadCall arg
+parseNumLeaf :: OWLParser Expr
+parseNumLeaf = (try parseNumUnary)
+	<|> (try parseNumber)
+	<|> parseExprLeaf
 
 ---------------------------------------------------------------------------------------------------
--- General Operators
+-- Numeric Literal Leaf Terms
 ---------------------------------------------------------------------------------------------------
 
-parseFuncCall :: OWLParser (String, [Expr])
-parseFuncCall = do
-	id <- identifier
-	args <- parens $ sepBy parseExpr comma
-	return (id, args)
+parseNumber :: OWLParser Expr
+parseNumber = parseNatural <|> parseInteger <|> parseReal
 
-parseArrayEl :: OWLParser (StuffNode, NumNode)
-parseArrayEl = do
-	array <- parseStuffNode
-	size <- brackets parseNumNode
-	return (array, size)
+parseNatural :: OWLParser Expr
+parseNatural = do
+	n <- natural
+	return $ NatLit n
+
+parseInteger :: OWLParser Expr
+parseInteger = do
+	n <- integer
+	return $ IntLit n
+
+parseReal :: OWLParser Expr
+parseReal = do
+	n <- real
+	return $ RealLit n
+
+---------------------------------------------------------------------------------------------------
+-- Numeric Unary Operators
+---------------------------------------------------------------------------------------------------
+
+parseNumUnary :: OWLParser Expr
+parseNumUnary = parseMinus
+
+parseMinus :: OWLParser Expr
+parseMinus = do
+	op <- minusToken
+	expr <- parseNumLeaf
+	return $ NumMinus expr
+
+---------------------------------------------------------------------------------------------------
+-- Numeric Binary Operators
+---------------------------------------------------------------------------------------------------
+
+parseAddChain :: OWLParser Expr
+parseAddChain = (try parseAddChainTail) <|> (try parseMulChain)
+
+parseAddChainTail :: OWLParser Expr
+parseAddChainTail = do
+	e1 <- parseMulChain
+	op <- plusToken <|> minusToken
+	e2 <- parseAddChain
+	if op == Tokens.Plus then
+		return $ NumAdd e1 e2
+	else
+		return $ NumSub e1 e2
+
+parseMulChain :: OWLParser Expr
+parseMulChain = (try parseMulChainTail) <|> (try parseNumLeaf)
+
+parseMulChainTail :: OWLParser Expr
+parseMulChainTail = do
+	e1 <- parseNumLeaf
+	op <- timesToken <|> divideToken <|> modulusToken
+	e2 <- parseMulChain
+	if op == Tokens.Times then
+		return $ NumMul e1 e2
+	else if op == Tokens.Divide then
+		return $ NumDiv e1 e2
+	else
+		return $ NumMod e1 e2

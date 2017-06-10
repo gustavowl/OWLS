@@ -1,0 +1,6 @@
+
+main() {
+	a : int = 10;
+	a = read();
+	return 0;
+}

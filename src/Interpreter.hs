@@ -7,8 +7,8 @@ import ProgramState
 import Expr --needed for getting leaf nodes values
 
 runProgram :: Program -> IO()
-runProgram (decs, main) = do
-	state <- addGlobalDecs decs initState
+runProgram (types, decs, main) = do
+	state <- addGlobalDecs decs (initState types)
 	i <- callMain getMainArgs main state
 	print i
 
@@ -35,13 +35,14 @@ callMain args (Function name params ret body) state1 = do
 	return ret
 callMain _ _ _ = do return 0
 
-callFunction :: Key -> [Expr] -> OWLState -> IO (OWLState, VarValue)
+callFunction :: Key -> [Expr] -> OWLState -> IO (OWLState, VarType, VarValue)
 callFunction (name, scopeID) args state1 = do
 	let (t, v) = getVar (name, scopeID) state1
 	(parentID, params, retType, body) <- getFuncInfo name t v
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state2
-	runFuncBody name body retType state3 >>= return
+	(state4, value) <- runFuncBody name body retType state3
+	return (state4, retType, value)
 
 callProcedure :: Key -> [Expr] -> OWLState -> IO OWLState
 callProcedure (name, scopeID) args state1 = do
@@ -56,19 +57,28 @@ addParameters [] [] state = do return state
 addParameters (a:args) ((Var name t1 expr):params) state1 = do 
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 addParameters (a:args) ((Function name p ret body):params) state1 = do 
-	(t, v, state2) <- evalExpr a state1
-	convertType t (FuncType (extractParamTypes p) ret)
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let t1 = FuncType (extractParamTypes p) ret
+	(t2, v, state2) <- evalExpr a state1
+	convertType t1 t2
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 addParameters (a:args) ((Procedure name p body):params) state1 = do 
-	(t, v, state2) <- evalExpr a state1
-	convertType t (ProcType (extractParamTypes p))
-	-- TODO: adicionar variáveis para cada parâmetro e checar os tipos de cada
-	return state2 
+	let t1 = ProcType (extractParamTypes p)
+	(t2, v, state2) <- evalExpr a state1
+	convertType t1 t2
+	let state3 = addVarDec name t1 state2
+	let scopeID = getScopeID name state3
+	let state4 = updateVar v (name, scopeID) state3
+	addParameters args params state4
 
+addParameters r f s = fail "Error in adding parameter"
 
 getFuncInfo :: String -> VarType -> VarValue -> IO (Integer, [Declaration], VarType, [Statement])
 getFuncInfo name (FuncType _ retType) (FuncValue parentID params body) = do
@@ -107,13 +117,6 @@ runFuncBody name (s:stmts) expectedType state1 = do
 			return (state3, value)
 		f (state2, BreakCall) = fail "Break is not breaking anything."
 
--- Verificar melhor posicao para adicionar
-errorType :: VarType -> String
-errorType (AtomicType "nat") = "nat"
-errorType (AtomicType "int") = "int"
-errorType (AtomicType "real") = "real"
-errorType (AtomicType "char") = "char"
-
 runProcBody :: String -> [Statement] -> OWLState -> IO OWLState
 runProcBody name [] state = do return state
 runProcBody name (s:stmts) state1 = do 
@@ -129,28 +132,7 @@ runIfElseBody (s:stmts) state = do
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
 		f (state1, Continue) = (runIfElseBody stmts state1)
-		f _ = fail "WTF runIfElseBody"
-
-runWhileBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
---when finishes running while loop; try running it again
-runWhileBody [] state = do return (state, Continue) 
-runWhileBody (s:stmts) state = do --executes next statement
-	runStatement s state >>= f where
-		f (state1, Return expr) = do return (state1, Return expr)
-		f (state1, Continue) = (runWhileBody stmts state1)
-	--TODO stop when break
-
-blaa :: (OWLState, StatementResult) -> [Statement] -> VarValue -> IO (OWLState, StatementResult)
-blaa (state2, Continue) body b = runWhileBodyRec b body state2
-blaa (state2, Return expr) _ _ = do return (state2, Return expr)
-
-runWhileBodyRec :: VarValue -> [Statement] -> OWLState -> IO (OWLState, StatementResult)
-runWhileBodyRec (BoolValue b) body state1 = do
-	if b then do
-		(state2, return) <- runWhileBody body state1
-		blaa (state2, return) body (BoolValue b)
-	else
-		return (state1, Continue) 
+		f _ = fail "Error in block (if else)."
 
 -- Statement pra interpretar -> valor esperado para o return (se houver) -> estado atual -> novo estado
 runStatement :: Statement -> OWLState -> IO (OWLState, StatementResult)
@@ -197,6 +179,7 @@ runStatement (ProcCall name args) state1 = do
 	let scopeID = getScopeID name state1
 	state2 <- callProcedure (name, scopeID) args state1
 	return (state2, Continue)
+
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
 	printValue v -- Ver printValue (note que falta definir como imprimir alguns tipos)
@@ -238,202 +221,228 @@ addDec (Procedure name params body) state = do
 	return $ addProcDec name params body state
 
 ---------------------------------------------------------------------------------------------------
--- Valuate Expression
+-- Evaluate Expression
 ---------------------------------------------------------------------------------------------------
+
+evalBoolExpr :: Expr -> OWLState -> IO (Bool, OWLState)
+evalBoolExpr expr state1 = do
+	(t, v, state2) <- evalExpr expr state1
+	convertType (AtomicType "bool") t
+	b <- getBoolValue v
+	return (b, state2) 
+
+boolToExpr :: Bool -> OWLState -> (VarType, VarValue, OWLState)
+boolToExpr b state = (AtomicType "bool", BoolValue b, state)
+
+evalNumExpr :: Expr -> OWLState -> IO (String, Double, OWLState)
+evalNumExpr expr state1 = do
+	(t, v, state2) <- evalExpr expr state1
+	numt <- getNumberType t
+	numv <- getNumberValue v
+	return (numt, numv, state2)
+
+numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
+numToExpr typ val state = (AtomicType typ, NumberValue val, state)
+
+convertArrayCharToExpr :: [Char] -> VarValue
+convertArrayCharToExpr arrayChar = ArrayValue [] -- TODO
 
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
-evalExpr (BoolExpr node) state1 = do
-	(b, state2) <- evalBoolExpr node state1
-	return (AtomicType "bool", BoolValue b, state2)
-
-evalExpr (NumExpr node) state1 = do
-	(n, s, state2) <- evalNumExpr node state1
-	return (AtomicType s, NumberValue n, state2)
-
-evalExpr (StuffExpr node) state = evalStuffExpr node state
 
 ---------------------------------------------------------------------------------------------------
--- Evaluate Boolean Expression
+-- Evaluate Leaves
 ---------------------------------------------------------------------------------------------------
 
-evalBoolExpr :: BoolNode -> OWLState -> IO (Bool, OWLState)
-
--- Boolean literal.
-evalBoolExpr (BoolLit b) state = do return (b, state)
-
--- Boolean variable.
-evalBoolExpr (BoolID name) state = do
+-- Variable.
+evalExpr (ID name) state = do
 	let scopeID = getScopeID name state
 	let (t, v) = getVar (name, scopeID) state
-	convertType (AtomicType "bool") t
-	b <- getBoolValue v
-	return (b, state)
+	return (t, v, state)
 
--- Function with boolean return.
-evalBoolExpr (BoolFuncCall name args) state1 = do 
+-- Funcion call.
+evalExpr (FuncCall name args) state1 = do
 	let scopeID = getScopeID name state1
-	retType <- getFuncRetType (name, scopeID) state1
-	convertType (AtomicType "bool") retType
-	(state2, value) <- callFunction (name, scopeID) args state1
-	b <- getBoolValue value
-	return (b, state2)
+	(state2, t, v) <- callFunction (name, scopeID) args state1
+	return (t, v, state2)
 
--- Boolean not.
-evalBoolExpr (BoolNot node) state1 = do
-	(v, state2) <- evalBoolExpr node state1
-	return (not v, state2)
+-- Read call.
+evalExpr (ReadCall) state = do
+	line <- getLine
+	let expr = convertArrayCharToExpr line
+	let size = NatLit $ (fromIntegral (length line)) + 0.0
+	return (ArrayType (AtomicType "char") size, expr, state)
 
--- Boolean and.
-evalBoolExpr (BoolAnd node1 node2) state1 = do
-	(v1, state2) <- evalBoolExpr node1 state1
-	(v2, state3) <- evalBoolExpr node2 state2
-	return (v1 && v2, state3)
+-- TODO: array element, pointer, field
 
-evalBoolExpr (BoolOr node1 node2) state1 = do
-	(v1, state2) <- evalBoolExpr node1 state1
-	(v2, state3) <- evalBoolExpr node2 state2
-	return (v1 || v2, state3)
+---------------------------------------------------------------------------------------------------
+-- Evaluate Literals
+---------------------------------------------------------------------------------------------------
 
-evalBoolExpr (BoolAndC node1 node2) state1 = do
-	(v1, state2) <- evalBoolExpr node1 state1
-	if v1 then do
-		(v2, state3) <- evalBoolExpr node2 state2
-		return (v2, state3)
+evalExpr (BoolLit b) state = do
+	return (AtomicType "bool", BoolValue b, state)
+
+evalExpr (NatLit n) state = do
+	return (AtomicType "nat", NumberValue n, state)
+
+evalExpr (IntLit n) state = do
+	return (AtomicType "int", NumberValue n, state)
+
+evalExpr (RealLit n) state = do
+	return (AtomicType "real", NumberValue n, state)
+
+evalExpr (CharLit c) state = do
+	return (AtomicType "char", CharValue c, state)
+
+evalExpr (ArrayLit n) state = do
+	return (AtomicType "nat", NumberValue 0, state) -- TODO: calcular cada elemento da array
+
+---------------------------------------------------------------------------------------------------
+-- Evaluate Boolean Operators
+---------------------------------------------------------------------------------------------------
+
+-- Boolean NOT.
+evalExpr (BoolNot expr) state1 = do
+	(b, state2) <- evalBoolExpr expr state1
+	return $ boolToExpr (not b) state2 
+
+-- Boolean AND.
+evalExpr (BoolOr expr1 expr2) state1 = do
+	(b1, state2) <- evalBoolExpr expr1 state1
+	(b2, state3) <- evalBoolExpr expr2 state2
+	return $ boolToExpr (b1 || b2) state3
+
+-- Boolean OR.
+evalExpr (BoolAnd expr1 expr2) state1 = do
+	(b1, state2) <- evalBoolExpr expr1 state1
+	(b2, state3) <- evalBoolExpr expr2 state2
+	return $ boolToExpr (b1 && b2) state3
+
+evalExpr (BoolOrC expr1 expr2) state1 = do
+	(b1, state2) <- evalBoolExpr expr1 state1
+	if not b1 then do
+		(b2, state3) <- evalBoolExpr expr2 state2
+		return $ boolToExpr b2 state3
 	else do
-		return (False, state2)
+		return $ boolToExpr True state2
 
-evalBoolExpr (BoolOrC node1 node2) state1 = do
-	(v1, state2) <- evalBoolExpr node1 state1
-	if not v1 then do
-		(v2, state3) <- evalBoolExpr node2 state2
-		return (v2, state3)
+evalExpr (BoolAndC expr1 expr2) state1 = do
+	(b1, state2) <- evalBoolExpr expr1 state1
+	if b1 then do
+		(b2, state3) <- evalBoolExpr expr2 state2
+		return $ boolToExpr b2 state3
 	else do
-		return (True, state2)
+		return $ boolToExpr False state2
 
-evalBoolExpr (BoolEq e1 e2) state1 = do
+---------------------------------------------------------------------------------------------------
+-- Evaluate Relationals
+---------------------------------------------------------------------------------------------------
+
+-- Equals.
+evalExpr (BoolEq e1 e2) state1 = do
 	(t1, v1, state2) <- evalExpr e1 state1
 	(t2, v2, state3) <- evalExpr e2 state2
-	if t1 == t2 && v1 == v2 then
-		return (True, state3)
+	if v1 == v2 then
+		return $ boolToExpr True state3
 	else
-		return (False, state3)
+		return $ boolToExpr False state3
 
-evalBoolExpr (BoolDif e1 e2) state1 = do
+-- Differs.
+evalExpr (BoolDif e1 e2) state1 = do
 	(b, state2) <- evalBoolExpr (BoolEq e1 e2) state1
-	return (not b, state2)
+	return $ boolToExpr (not b) state2
 
-evalBoolExpr (BoolGt e1 e2) state1 = do
-	(t1, NumberValue v1, state2) <- evalExpr e1 state1
-	(t2, NumberValue v2, state3) <- evalExpr e2 state2
+-- Greater than.
+evalExpr (BoolGt e1 e2) state1 = do
+	(t1, v1, state2) <- evalNumExpr e1 state1
+	(t2, v2, state3) <- evalNumExpr e2 state2
 	if v1 > v2 then
-		return (True, state3)
+		return $ boolToExpr True state3
 	else
-		return (False, state3)
+		return $ boolToExpr False state3
 
-evalBoolExpr (BoolGtEq e1 e2) state1 = do
-	(t1, NumberValue v1, state2) <- evalExpr e1 state1
-	(t2, NumberValue v2, state3) <- evalExpr e2 state2
+-- Greater than or equal to.
+evalExpr (BoolGtEq e1 e2) state1 = do
+	(t1, v1, state2) <- evalNumExpr e1 state1
+	(t2, v2, state3) <- evalNumExpr e2 state2
 	if v1 >= v2 then
-		return (True, state3)
+		return $ boolToExpr True state3
 	else
-		return (False, state3)
+		return $ boolToExpr False state3
 
-evalBoolExpr (BoolLt e1 e2) state = evalBoolExpr (BoolGt e2 e1) state
-evalBoolExpr (BoolLtEq e1 e2) state = evalBoolExpr (BoolGtEq e2 e1) state
+-- Less than.
+evalExpr (BoolLt e1 e2) state = evalExpr (BoolGt e2 e1) state
+
+-- Less than or equal to.
+evalExpr (BoolLtEq e1 e2) state = evalExpr (BoolGtEq e2 e1) state
 
 ---------------------------------------------------------------------------------------------------
--- Valuate Numeric Expression
+-- Evaluate Numeric Operators
 ---------------------------------------------------------------------------------------------------
 
-evalNumExpr :: NumNode -> OWLState -> IO (Double, String, OWLState)
-
--- Numeric literals.
-evalNumExpr (NumNat n) state = do return (n, "nat", state)
-evalNumExpr (NumInt n) state = do return (n, "int", state)
-evalNumExpr (NumReal n) state = do return (n, "real", state)
-
--- Numeric variables.
-evalNumExpr (NumID name) state = do
-	let scope = getScopeID name state
-	let (varType, value) = getVar (name, scope) state
-	-- print state -- (DEBUG)
-	v <- getNumberValue value
-	t <- getNumberType varType
-	return (v, t, state)
-
--- Function with numeric return.
-evalNumExpr (NumFuncCall name args) state1 = do
-	let scopeID = getScopeID name state1
-	retType <- getFuncRetType (name, scopeID) state1
-	t <- getNumberType retType
-	(state2, value) <- callFunction (name, scopeID) args state1
-	n <- getNumberValue value
-	return (n, t, state2)
-
--- Array with numeric elements.
-evalNumExpr (NumEl array num) state = do return (0, "nat", state) -- TODO
-
--- Numeric negative.
-evalNumExpr (NumMinus node) state1 = do
-	(val, typ, state2) <- evalNumExpr node state1
+-- Numeric negation.
+evalExpr (NumMinus expr) state1 = do
+	(typ, val, state2) <- evalNumExpr expr state1
 	if typ == "real" then
-		return (-val, "real", state2) 
+		return $ numToExpr "real" (-val) state2 
 	else
-		return (-val, "int", state2)
+		return $ numToExpr "int" (-val) state2
 
 -- Numeric addition.
-evalNumExpr (NumAdd node1 node2) state1 = do
-	(val1, typ1, state2) <- evalNumExpr node1 state1
-	(val2, typ2, state3) <- evalNumExpr node2 state2
+evalExpr (NumAdd expr1 expr2) state1 = do
+	(typ1, val1, state2) <- evalNumExpr expr1 state1
+	(typ2, val2, state3) <- evalNumExpr expr2 state2
 	if typ1 == "real" || typ2 == "real" then
-		return (val1 + val2, "real", state3) 
+		return $ numToExpr "real" (val1 + val2) state3 
 	else if typ1 == "int" || typ2 == "int" then
-		return (val1 + val2, "int", state3)
+		return $ numToExpr "int" (val1 + val2) state3
 	else
-		return (val1 + val2, "nat", state3)
+		return $ numToExpr "nat" (val1 + val2) state3
 
 -- Numeric subtraction.
-evalNumExpr (NumSub node1 node2) state1 = do
-	(val1, typ1, state2) <- evalNumExpr node1 state1
-	(val2, typ2, state3) <- evalNumExpr node2 state2
+evalExpr (NumSub expr1 expr2) state1 = do
+	(typ1, val1, state2) <- evalNumExpr expr1 state1
+	(typ2, val2, state3) <- evalNumExpr expr2 state2
 	if typ1 == "real" || typ2 == "real" then
-		return (val1 - val2, "real", state3) 
+		return $ numToExpr "real" (val1 - val2) state3
 	else 
-		return (val1 - val2, "int", state3)
+		return $ numToExpr "int" (val1 - val2) state3
 
 -- Numeric multiplication.
-evalNumExpr (NumMul node1 node2) state1 = do
-	(val1, typ1, state2) <- evalNumExpr node1 state1
-	(val2, typ2, state3) <- evalNumExpr node2 state2
+evalExpr (NumMul expr1 expr2) state1 = do
+	(typ1, val1, state2) <- evalNumExpr expr1 state1
+	(typ2, val2, state3) <- evalNumExpr expr2 state2
 	if typ1 == "real" || typ2 == "real" then
-		return (val1 * val2, "real", state3) 
+		return $ numToExpr "real" (val1 * val2) state3
 	else if typ1 == "int" || typ2 == "int" then
-		return (val1 * val2, "int", state3)
+		return $ numToExpr "int" (val1 * val2) state3
 	else
-		return (val1 * val2, "nat", state3)
+		return $ numToExpr "nat" (val1 * val2) state3
 
 -- Numeric division.
-evalNumExpr (NumDiv node1 node2) state1 = do
-	(val1, typ1, state2) <- evalNumExpr node1 state1
-	(val2, typ2, state3) <- evalNumExpr node2 state2
-	return (val1 / val2, "real", state3)
+evalExpr (NumDiv expr1 expr2) state1 = do
+	(typ1, val1, state2) <- evalNumExpr expr1 state1
+	(typ2, val2, state3) <- evalNumExpr expr2 state2
+	return $ numToExpr "real" (val1 / val2) state3
 
 -- Numeric modulus.
-evalNumExpr (NumMod node1 node2) state1 = do
-	(val1, typ1, state2) <- evalNumExpr node1 state1
-	(val2, typ2, state3) <- evalNumExpr node2 state2
+evalExpr (NumMod expr1 expr2) state1 = do
+	(typ1, val1, state2) <- evalNumExpr expr1 state1
+	(typ2, val2, state3) <- evalNumExpr expr2 state2
 	if typ1 == "real" || typ2 == "real" then
-		return (mod' val1 val2, "real", state3) 
+		return $ numToExpr "real" (mod' val1 val2) state3
 	else if typ1 == "int" || typ2 == "int" then
-		return (mod' val1 val2, "int", state3)
+		return $ numToExpr "int" (mod' val1 val2) state3
 	else
-		return (mod' val1 val2, "nat", state3)
+		return $ numToExpr "nat" (mod' val1 val2) state3
+
 
 ---------------------------------------------------------------------------------------------------
--- Evaluate Stuff Expression
+-- Check Errors Functions
 ---------------------------------------------------------------------------------------------------
 
-evalStuffExpr :: StuffNode -> OWLState -> IO (VarType, VarValue, OWLState)
-evalStuffExpr node state = do
-	return (AtomicType "", NumberValue 0, state) -- TODO
+errorType :: VarType -> String
+errorType (AtomicType "nat") = "nat"
+errorType (AtomicType "int") = "int"
+errorType (AtomicType "real") = "real"
+errorType (AtomicType "char") = "char"
