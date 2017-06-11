@@ -6,20 +6,25 @@ struct fracao {
 
 struct fracao1 {
 	a : fracao;
-	b : nat = 1;
+	c : nat = 1;
 }
 
-x : fracao1;
 
-func soma(x : fracao1) : int {
-	return (x.a).b;
+x : fracao1;
+z : fracao;
+
+func soma(x : fracao1) : nat {
+	bla : fracao1;
+	bla.b = 0;	
+	return (x.a).c;
 }
 
 main () {
-	x.b = 2;
+	x.a.a = 2;
 	a : int;
-	a = soma(x);
-	write(a);
+	b : nat;
+	b = soma(x);
+	#write(a);
 	return 0;
 	#return (x.a / x.b);
 }

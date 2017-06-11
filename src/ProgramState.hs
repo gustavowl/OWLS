@@ -46,15 +46,19 @@ getScope scopeID (stack, _) = f (popToScope scopeID stack) where
 	f [] = nullScope
 	f (h:t) = h
 
-getScopeID :: String -> OWLState -> IO Integer
-getScopeID name (stack, _) = do
+getScopeID :: AssignKey -> OWLState -> IO Integer
+getScopeID (AssignVar name) (stack, _) = do
 	let id = searchVarScope name stack
 	if id == -1 then do
 		--print stack
 		fail $ "Variable " ++ name ++ " not found."
 	else
 		return id
-
+getScopeID (AssignEl assignKey expr) (stack, _) = do return 0 -- TODO
+getScopeID (AssignField assignKey name) (stack, types) = do 
+	getScopeID assignKey (stack, types)
+getScopeID (AssignContent assignKey) (stack, _) = do return 0
+	
 searchVarScope :: String -> [Scope] -> Integer
 searchVarScope name [] = -1
 searchVarScope name ((currentID, parentID, table):scopes) =

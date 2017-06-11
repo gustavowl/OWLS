@@ -66,7 +66,7 @@ addParameters (a:args) (h:params) state1 newState1 = do
 	(t2, v, state2) <- evalExpr a state1
 	convertType t1 t2
 	let newState2 = addVarDec name t1 newState1
-	scopeID <- getScopeID name newState2
+	scopeID <- getScopeID (AssignVar name) newState2
 	let newState3 = updateVar v (name, scopeID) newState2
 	addParameters args params state2 newState3
 
@@ -220,7 +220,7 @@ runStatement Break state = do
 
 -- General statements. (TODO)
 runStatement (ProcCall name args) state1 = do
-	scopeID <- getScopeID name state1
+	scopeID <- getScopeID (AssignVar name) state1
 	state2 <- callProcedure (name, scopeID) args state1
 	return (state2, Continue)
 
@@ -230,7 +230,7 @@ runStatement (WriteCall expr) state1 = do
 	return (state2, Continue)
 
 runStatement (Assignment (AssignVar name) assign) state1 = do 
-	scopeID <- getScopeID name state1
+	scopeID <- getScopeID (AssignVar name) state1
 	(expectedType, _) <- getVar (name, scopeID) state1
 	(actualType, value, state2) <- evalExpr assign state1
 	convertType expectedType actualType
@@ -241,6 +241,7 @@ runStatement (Assignment (AssignEl array index) assign) state1 = do
 	return (state1, Continue) -- TODO
 
 runStatement (Assignment (AssignField struct field) assign) state1 = do 
+	scopeID <- getScopeID struct state1
 	return (state1, Continue) -- TODO
 
 runStatement (Assignment (AssignContent ptr) assign) state1 = do 
@@ -282,7 +283,7 @@ addDec (Var name varType (Just e)) state1 = do
 	convertType varType actualType
 	let state3 = addVarDec name varType state2
 	--print state3
-	scopeID <- getScopeID name state3
+	scopeID <- getScopeID (AssignVar name) state3
 	return $ updateVar value (name, scopeID) state3
 
 addDec (Function name params ret body) state = do
@@ -314,18 +315,45 @@ evalNumExpr expr state1 = do
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
 
-getFieldValue :: String -> [Declaration] -> [VarValue] -> (VarType, VarValue)
-getFieldValue _ [] [] = (nullVarType, nullVarValue)
+getFieldValue :: String -> [Declaration] -> [VarValue] -> IO (VarType, VarValue)
+getFieldValue _ [] [] = do return (nullVarType, nullVarValue)
 getFieldValue name1 (d:decs) (v:varValues) = do 
 	let name2 = getDecName d
 	let t = getDecType d
-	if name1 == name2 then
-		(t, v)
+	if name1 == name2 then do
+		return (t, v)
 	else do
 		getFieldValue name1 decs varValues
 
 stringToDouble :: String -> Double
 stringToDouble x = read x :: Double
+
+searchFieldValue :: VarType -> [VarValue] -> String -> OWLState -> IO (VarType, VarValue)
+searchFieldValue (AtomicType t) v n (_, userTypes) =
+	let (_,decs) = getUserType t userTypes in
+	getFieldValue n decs v
+searchFieldValue t v n (_, userTypes) = do return (nullVarType, nullVarValue) -- TODO 
+
+findFieldValue :: Expr -> String -> OWLState -> IO (VarType, VarValue)
+findFieldValue (ID root) name state1 = do 
+	(t, v, _) <- evalExpr (ID root) state1
+	return (t, v)
+findFieldValue (Field expr name1) name2 state1 = do
+	(t, v) <- findFieldValue expr name1 state1
+	if isUserType v then do
+		searchFieldValue t (getVarValueList v) name1 state1
+	else if name1 /= name2 then
+		return (t, v)
+	else 
+		fail "Not found."
+	
+isUserType :: VarValue -> Bool
+isUserType (UserValue v) = True
+isUserType _ = False
+
+getVarValueList :: VarValue -> [VarValue]
+getVarValueList (UserValue v) = v 
+getVarValueList _ = []
 
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
@@ -336,7 +364,7 @@ evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
 -- Generic funcion call.
 evalExpr (FuncCall name args) state1 = do
-	scopeID <- getScopeID name state1
+	scopeID <- getScopeID (AssignVar name) state1
 	(t, v, state2) <- callFunction (name, scopeID) args state1
 	return (t, v, state2)
 
@@ -395,7 +423,7 @@ evalExpr (NewCall typ) state1 = do
 
 -- Variable.
 evalExpr (ID name) state = do
-	scopeID <- getScopeID name state
+	scopeID <- getScopeID (AssignVar name) state
 	(t, v) <- getVar (name, scopeID) state
 	return (t, v, state)
 
@@ -407,12 +435,9 @@ evalExpr (Content expr) state1 = do
 	return (t, v, state2)
 
 -- Struct field.
-evalExpr (Field expr name) state1 = do 
-	((AtomicType userTypeName), (UserValue v), state2) <- evalExpr expr state1
-	let userTypes = getListUserTypes state2
-	let (_, decs) = (getUserType userTypeName userTypes)
-	let (fieldType, fieldValue) = getFieldValue name decs v
-	return (fieldType, fieldValue, state2)
+evalExpr (Field expr name) state = do 
+	(t, v) <- findFieldValue (Field expr name) name state
+	return (t, v, state)
 
 -- Array elements.
 evalExpr (ArrayEl aexpr iexpr) state1 = do 
@@ -431,7 +456,7 @@ evalExpr (ArrayEl aexpr iexpr) state1 = do
 
 -- Variable address.
 evalExpr (Addr name) state = do
-	scopeID <- getScopeID name state
+	scopeID <- getScopeID (AssignVar name) state
 	let key = (name, scopeID)
 	(t, v) <- getVar key state
 	return (PointerType t, PointerValue key, state)
