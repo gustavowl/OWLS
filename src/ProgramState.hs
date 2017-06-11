@@ -7,8 +7,8 @@ import Types
 -- State
 ---------------------------------------------------------------------------------------------------
 
--- Pilha de escopos, lista de tipos definidos pelo usuário
-type OWLState = ([Scope], [UserType])  
+-- Contador de escopos, contador de variáveis anônimas, Pilha de escopos, lista de tipos definidos pelo usuário
+type OWLState = (Integer, Integer, [Scope], [UserType])  
 
 -- ID do escopo atual, ID do escopo ancestral, tabela de símbolos
 type Scope = (Integer, Integer, [TableEntry])
@@ -38,27 +38,23 @@ nullVarValue = NumberValue 12345666
 
 -- Cria um novo escopo para uma chamada de função cujo ancestral é o dado como argumento.
 newScope :: Integer -> OWLState -> OWLState
-newScope newParentID ((currentID, parentID, table):scopeList, types) = 
-	((currentID + 1, newParentID, []):(currentID, parentID, table):scopeList, types)
+newScope newParentID (count, avars, scopeList, types) = 
+	(count + 1, avars, (count, newParentID, []):scopeList, types)
 
 getScope :: Integer -> OWLState -> Scope
-getScope scopeID (stack, _) = f (popToScope scopeID stack) where
+getScope scopeID (_, _, stack, _) = f (popToScope scopeID stack) where
 	f [] = nullScope
 	f (h:t) = h
 
-getScopeID :: AssignKey -> OWLState -> IO Integer
-getScopeID (AssignVar name) (stack, _) = do
+getScopeID :: String -> OWLState -> IO Integer
+getScopeID name (_, _, stack, _) = do
 	let id = searchVarScope name stack
 	if id == -1 then do
 		--print stack
 		fail $ "Variable " ++ name ++ " not found."
 	else
 		return id
-getScopeID (AssignEl assignKey expr) (stack, _) = do return 0 -- TODO
-getScopeID (AssignField assignKey name) (stack, types) = do 
-	getScopeID assignKey (stack, types)
-getScopeID (AssignContent assignKey) (stack, _) = do return 0
-	
+		
 searchVarScope :: String -> [Scope] -> Integer
 searchVarScope name [] = -1
 searchVarScope name ((currentID, parentID, table):scopes) =
@@ -84,7 +80,7 @@ isInScope name ((varName, _, _):t) =
 		isInScope name t
 
 popScope :: OWLState -> OWLState
-popScope (h:t, types) = (t, types)
+popScope (c1, c2, h:t, types) = (c1, c2, t, types)
 popScope a = a -- Should not happen.
 
 ---------------------------------------------------------------------------------------------------
@@ -92,10 +88,10 @@ popScope a = a -- Should not happen.
 ---------------------------------------------------------------------------------------------------
 
 addVarDec :: String -> VarType -> OWLState -> OWLState
-addVarDec name varType ([], types) = ([], types)
-addVarDec name varType ((a, b, table):scopes, types) = let
+addVarDec name varType (c1, c2, [], types) = (c1, c2, [], types)
+addVarDec name varType (c1, c2, (a, b, table):scopes, types) = let
 	newElement = (name, varType, (getInitValue varType types)) in
-	((a, b, newElement:table):scopes, types)
+	(c1, c2, (a, b, newElement:table):scopes, types)
 
 updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry] 
 updateTableEntry v name [] = []
@@ -117,7 +113,7 @@ updateVarScopes _ _ [] = []
 updateVarScopes v k (h:scopes) = (updateScope v k h) : (updateVarScopes v k scopes)
 
 updateVar :: VarValue -> Key -> OWLState -> OWLState
-updateVar value key (scopes, userTypes) = ((updateVarScopes value key scopes), userTypes)
+updateVar value key (c1, c2, scopes, userTypes) = (c1, c2, (updateVarScopes value key scopes), userTypes)
 
 getVar :: Key -> OWLState -> IO (VarType, VarValue)
 getVar (name, scopeID) state = do
@@ -135,14 +131,14 @@ getVarFromTable name ((name', t, v):table) = do
 		return var
 
 addFuncDec :: String -> [Declaration] -> VarType -> [Statement] -> OWLState -> OWLState
-addFuncDec name params ret body ([(a, b, table)], types) = let 
+addFuncDec name params ret body (c1, c2, [(a, b, table)], types) = let 
 	newFuncDec = (name, FuncType (extractParamTypes params) ret, FuncValue a params body) in
-	([(a, b, newFuncDec:table)], types)
+	(c1, c2, [(a, b, newFuncDec:table)], types)
 
 addProcDec :: String -> [Declaration] -> [Statement] -> OWLState -> OWLState
-addProcDec name params body ([(a, b, table)], types) = let 
+addProcDec name params body (c1, c2, [(a, b, table)], types) = let 
 	newProcDec = (name, ProcType (extractParamTypes params), ProcValue a params body) in
-	([(a, b, newProcDec:table)], types)
+	(c1, c2, [(a, b, newProcDec:table)], types)
 
 ---------------------------------------------------------------------------------------------------
 -- Declaration info
@@ -173,10 +169,10 @@ extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)
 
 -- Apenas o escopo global, vazio.
 initState :: [UserType] -> OWLState
-initState types = ([(0, -1, [])], types)
+initState types = (1, 0, [(0, -1, [])], types)
 
 getListUserTypes :: OWLState -> [UserType]
-getListUserTypes (_, userTypes) = userTypes
+getListUserTypes (_, _, _, userTypes) = userTypes
 
 getUserType :: String -> [UserType] -> UserType
 getUserType name1 ((name2, decs):types) = 

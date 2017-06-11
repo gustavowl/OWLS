@@ -16,7 +16,7 @@ z : fracao;
 func soma(x : fracao1) : nat {
 	bla : fracao1;
 	bla.b = 0;	
-	return (x.a).c;
+	return (x.a).b;
 }
 
 main () {

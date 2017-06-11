@@ -16,9 +16,13 @@ parseExpr = parseBoolExpr
 parseExprLeaf :: OWLParser Expr
 parseExprLeaf = do 
 	leaf <-	(try parseFuncCall)
+		<|> (try parseSizeofCall)
+		<|> (try parseNewCall)
+		<|> (try parseArrayCall)
 		<|> (try parseArray)
 		<|> (try parseString)
 		<|> (try parseChar)
+		<|> (try parseContent)
 		<|> (try parseAddr)
 		<|> (try parseID)
 		<|> (parens parseExpr)
@@ -93,12 +97,9 @@ parseArrayCall = do
 parseLeafMods :: Expr -> OWLParser Expr
 parseLeafMods leaf = do
 	optionMaybe ((try $ parseArrayEl leaf) 
-		<|> (try $ parseField leaf) 
-		<|> (try $ parseContent leaf)) >>= f where
+		<|> (try $ parseField leaf)) >>= f where
 			f Nothing = return leaf
-			f (Just e) = do
-				mods <- parseLeafMods e
-				return mods
+			f (Just e) = parseLeafMods e >>= return
 
 parseArrayEl :: Expr -> OWLParser Expr
 parseArrayEl array = do
@@ -110,11 +111,6 @@ parseField struct = do
 	dotToken
 	field <- identifier
 	return $ Field struct field
-
-parseContent :: Expr -> OWLParser Expr
-parseContent ptr = do
-	atToken
-	return $ Content ptr
 
 ---------------------------------------------------------------------------------------------------
 -- General Literals
@@ -145,6 +141,12 @@ parseAddr = do
 	var <- identifier <|> parens identifier
 	return $ Addr var
 
+parseContent :: OWLParser Expr
+parseContent = do
+	atToken
+	var <- parseID <|> parens parseExpr
+	return $ Content var
+
 ---------------------------------------------------------------------------------------------------
 -- Boolean Expr
 ---------------------------------------------------------------------------------------------------
@@ -155,7 +157,7 @@ parseBoolExpr = parseOrChain
 parseBoolLeaf :: OWLParser Expr
 parseBoolLeaf = (try parseBoolUnary)
 	<|> (try parseBoolean)
-	<|> parseExprLeaf
+	<|> (try parseExprLeaf)
 
 ---------------------------------------------------------------------------------------------------
 -- Boolean Literal
@@ -214,7 +216,7 @@ parseAndChainTail = do
 ---------------------------------------------------------------------------------------------------
 
 parseRelational :: OWLParser Expr
-parseRelational = (try parseRelationalTail) <|> parseNumExpr <|> parseBoolLeaf
+parseRelational = (try parseRelationalTail) <|> (try parseNumExpr) <|> parseBoolLeaf
 
 parseRelationalTail :: OWLParser Expr
 parseRelationalTail = do
@@ -247,7 +249,7 @@ parseNumLeaf = (try parseNumUnary)
 	<|> (try parseReadNatCall)
 	<|> (try parseReadIntCall)
 	<|> (try parseReadRealCall)
-	<|> parseExprLeaf
+	<|> (try parseExprLeaf)
 
 ---------------------------------------------------------------------------------------------------
 -- Numeric Literal Leaf Terms
