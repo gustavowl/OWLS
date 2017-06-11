@@ -6,7 +6,6 @@ import Data.Functor.Identity
 import Control.Monad
 import ProgramTree
 import Expr
-import TypeExpr
 import Lexer
 import qualified Tokens as T
 
@@ -105,6 +104,7 @@ parseStatement :: OWLParser Statement
 parseStatement = (try parseDecStatement) 
 	<|> (try $ parseSemi parseProcCall)
 	<|> (try $ parseSemi parseWriteCall)
+	<|> (try $ parseSemi parseDeleteCall)
 	<|> (try $ parseSemi parseProcRet)
 	<|> (try $ parseSemi parseFuncRet)
 	<|> (try $ parseSemi parseAssignment)
@@ -146,6 +146,12 @@ parseWriteCall = do
 	writeToken
 	arg <- parens parseExpr
 	return $ WriteCall arg
+
+parseDeleteCall :: OWLParser Statement
+parseDeleteCall = do
+	deleteToken
+	ptr <- parens parseExpr
+	return $ DeleteCall ptr
 
 ---------------------------------------------------------------------------------------------------
 -- Return
@@ -246,7 +252,7 @@ parseFor = do
 	semi
 	expr <- parseBoolExpr
 	semi
-	incr <- parseAssignment
+	incr <- (try parseAssignment) <|> (try parseProcCall) <|> parseWriteCall
 	rparen
 	body <- parseBlock
 	return $ For ini expr incr body

@@ -56,5 +56,5 @@ main() {
 			write(2113); #this does not run. NOICE!
 		}
 	}
-	return 93;
+	return 1 + 1 - 1 + 1;
 }

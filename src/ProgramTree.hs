@@ -24,6 +24,7 @@ data Statement = VarDec Declaration
 	| ProcRet
 	| ProcCall String [Expr]
 	| WriteCall Expr
+	| DeleteCall Expr
 	| Assignment AssignKey Expr
 	| If Expr [Statement] [Statement]
 	| While Expr [Statement]
@@ -50,6 +51,7 @@ data Expr = BoolLit Bool
 	| ReadRealCall
 	| ArrayCall [Expr]
 	| SizeofCall Expr
+	| NewCall VarType
 	| BoolNot Expr
 	| BoolAnd Expr Expr
 	| BoolOr Expr Expr

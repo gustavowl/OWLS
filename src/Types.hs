@@ -67,3 +67,13 @@ canConvertType (AtomicType "int") (AtomicType "nat") = True
 canConvertType (AtomicType "real") (AtomicType "nat") = True
 canConvertType (AtomicType "real") (AtomicType "int") = True
 canConvertType a b = a == b
+
+---------------------------------------------------------------------------------------------------
+-- Check Errors Functions
+---------------------------------------------------------------------------------------------------
+
+errorType :: VarType -> String
+errorType (AtomicType "nat") = "nat"
+errorType (AtomicType "int") = "int"
+errorType (AtomicType "real") = "real"
+errorType (AtomicType "char") = "char"

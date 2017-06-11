@@ -115,17 +115,20 @@ updateVarScopes v k (h:scopes) = (updateScope v k h) : (updateVarScopes v k scop
 updateVar :: VarValue -> Key -> OWLState -> OWLState
 updateVar value key (scopes, userTypes) = ((updateVarScopes value key scopes), userTypes)
 
-getVar :: Key -> OWLState -> (VarType, VarValue)
-getVar (name, scopeID) state = let
-	(_, _, table) = getScope scopeID state in getVarFromTable name table
+getVar :: Key -> OWLState -> IO (VarType, VarValue)
+getVar (name, scopeID) state = do
+	let (_, _, table) = getScope scopeID state 
+	var <- getVarFromTable name table
+	return var
 
-getVarFromTable :: String -> [TableEntry] -> (VarType, VarValue)
-getVarFromTable name [] = (nullVarType, nullVarValue)
-getVarFromTable name ((name', t, v):table) = 
+getVarFromTable :: String -> [TableEntry] -> IO (VarType, VarValue)
+getVarFromTable name [] = fail "Null pointer."
+getVarFromTable name ((name', t, v):table) = do
 	if name == name' then 
-		(t, v)
-	else 
-		getVarFromTable name table
+		return (t, v)
+	else do
+		var <- getVarFromTable name table
+		return var
 
 addFuncDec :: String -> [Declaration] -> VarType -> [Statement] -> OWLState -> OWLState
 addFuncDec name params ret body ([(a, b, table)], types) = let 

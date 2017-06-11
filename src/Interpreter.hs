@@ -37,7 +37,7 @@ callMain _ _ _ = do return 0
 
 callFunction :: Key -> [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
 callFunction (name, scopeID) args state1 = do
-	let (t, v) = getVar (name, scopeID) state1
+	(t, v) <- getVar (name, scopeID) state1
 	(parentID, params, retType, body) <- getFuncInfo name t v
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state1 state2
@@ -46,7 +46,7 @@ callFunction (name, scopeID) args state1 = do
 
 callProcedure :: Key -> [Expr] -> OWLState -> IO OWLState
 callProcedure (name, scopeID) args state1 = do
-	let (t, v) = getVar (name, scopeID) state1
+	(t, v) <- getVar (name, scopeID) state1
 	(parentID, params, body) <- getProcInfo name t v
 	let state2 = newScope parentID state1
 	state3 <- addParameters args params state1 state2
@@ -82,7 +82,7 @@ getProcInfo name _ _ = do fail $ name ++ " is not a procedure."
 
 getFuncRetType :: Key -> OWLState -> IO VarType
 getFuncRetType (name, scopeID) state = do
-	let (t, v) = getVar (name, scopeID) state
+	(t, v) <- getVar (name, scopeID) state
 	(parentID, params, retType, body) <- getFuncInfo name t v
 	return retType
 
@@ -231,7 +231,7 @@ runStatement (WriteCall expr) state1 = do
 
 runStatement (Assignment (AssignVar name) assign) state1 = do 
 	scopeID <- getScopeID name state1
-	let (expectedType, _) = getVar (name, scopeID) state1
+	(expectedType, _) <- getVar (name, scopeID) state1
 	(actualType, value, state2) <- evalExpr assign state1
 	convertType expectedType actualType
 	let state3 = updateVar value (name, scopeID) state2
@@ -379,6 +379,12 @@ evalExpr (SizeofCall expr) state1 = do
 	let size = 0 -- TODO: pegar tamanho da array
 	return (AtomicType "nat", NumberValue size, state2)
 
+-- New call.
+evalExpr (NewCall typ) state1 = do
+	let name = "12345" -- TODO: adicionar ao state um contador para ser a key da variável
+	let state2 = addVarDec name typ state1
+	return (PointerType typ, PointerValue (name, 0), state2)
+
 ---------------------------------------------------------------------------------------------------
 -- Variables
 ---------------------------------------------------------------------------------------------------
@@ -386,14 +392,14 @@ evalExpr (SizeofCall expr) state1 = do
 -- Variable.
 evalExpr (ID name) state = do
 	scopeID <- getScopeID name state
-	let (t, v) = getVar (name, scopeID) state
+	(t, v) <- getVar (name, scopeID) state
 	return (t, v, state)
 
 -- Pointer content.
 evalExpr (Content expr) state1 = do
 	(pt, pv, state2) <- evalExpr expr state1
 	(name, scopeID) <- getPointerValue pv
-	let (t, v) = getVar (name, scopeID) state2
+	(t, v) <- getVar (name, scopeID) state2
 	return (t, v, state2)
 
 -- Struct field.
@@ -418,6 +424,13 @@ evalExpr (ArrayEl aexpr iexpr) state1 = do
 	else do
 		let el = array !! (fromInteger i)
 		return (typ, el, state3)
+
+-- Variable address.
+evalExpr (Addr name) state = do
+	scopeID <- getScopeID name state
+	let key = (name, scopeID)
+	(t, v) <- getVar key state
+	return (PointerType t, PointerValue key, state)
 
 ---------------------------------------------------------------------------------------------------
 -- Evaluate Literals
@@ -463,6 +476,7 @@ evalExpr (BoolAnd expr1 expr2) state1 = do
 	(b2, state3) <- evalBoolExpr expr2 state2
 	return $ boolToExpr (b1 && b2) state3
 
+-- Boolean short-circuit OR.
 evalExpr (BoolOrC expr1 expr2) state1 = do
 	(b1, state2) <- evalBoolExpr expr1 state1
 	if not b1 then do
@@ -471,6 +485,7 @@ evalExpr (BoolOrC expr1 expr2) state1 = do
 	else do
 		return $ boolToExpr True state2
 
+-- Boolean short-circuit AND.
 evalExpr (BoolAndC expr1 expr2) state1 = do
 	(b1, state2) <- evalBoolExpr expr1 state1
 	if b1 then do
@@ -612,14 +627,3 @@ createArrayValues (h:t) typ1 state1 = do
 	convertType typ1 typ2
 	(exprs, state3) <- createArrayValues t typ1 state2
 	return (expr:exprs, state3)
-
----------------------------------------------------------------------------------------------------
--- Check Errors Functions
----------------------------------------------------------------------------------------------------
-
-errorType :: VarType -> String
-errorType (AtomicType "nat") = "nat"
-errorType (AtomicType "int") = "int"
-errorType (AtomicType "real") = "real"
-errorType (AtomicType "char") = "char"
-

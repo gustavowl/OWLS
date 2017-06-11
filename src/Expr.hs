@@ -74,6 +74,12 @@ parseSizeofCall = do
 	expr <- parens parseExpr
 	return $ SizeofCall expr
 
+parseNewCall :: OWLParser Expr
+parseNewCall = do
+	newToken
+	typ <- parens parseVarType
+	return $ NewCall typ
+
 parseArrayCall :: OWLParser Expr
 parseArrayCall = do
 	arrayToken
@@ -283,29 +289,81 @@ parseMinus = do
 ---------------------------------------------------------------------------------------------------
 
 parseAddChain :: OWLParser Expr
-parseAddChain = (try parseAddChainTail) <|> (try parseMulChain)
-
-parseAddChainTail :: OWLParser Expr
-parseAddChainTail = do
+parseAddChain = do
 	e1 <- parseMulChain
-	op <- plusToken <|> minusToken
-	e2 <- parseAddChain
-	if op == Tokens.Plus then
-		return $ NumAdd e1 e2
-	else
-		return $ NumSub e1 e2
+	e2 <- parseAddChainTail e1
+	return e2
+
+parseAddChainTail :: Expr -> OWLParser Expr
+parseAddChainTail e1 = do
+	optionMaybe (plusToken <|> minusToken) >>= f where
+		f Nothing = do return e1
+		f (Just op) = do
+			e2 <- parseMulChain
+			if op == Tokens.Plus then
+				parseAddChainTail (NumAdd e1 e2) >>= return
+			else
+				parseAddChainTail (NumSub e1 e2) >>= return
 
 parseMulChain :: OWLParser Expr
-parseMulChain = (try parseMulChainTail) <|> (try parseNumLeaf)
-
-parseMulChainTail :: OWLParser Expr
-parseMulChainTail = do
+parseMulChain = do
 	e1 <- parseNumLeaf
-	op <- timesToken <|> divideToken <|> modulusToken
-	e2 <- parseMulChain
-	if op == Tokens.Times then
-		return $ NumMul e1 e2
-	else if op == Tokens.Divide then
-		return $ NumDiv e1 e2
-	else
-		return $ NumMod e1 e2
+	e2 <- parseMulChainTail e1
+	return e2
+
+parseMulChainTail :: Expr -> OWLParser Expr
+parseMulChainTail e1 = do
+	optionMaybe (timesToken <|> divideToken <|> modulusToken) >>= f where
+		f Nothing = do return e1
+		f (Just op) = do
+			e2 <- parseMulChain
+			if op == Tokens.Times then
+				parseMulChainTail (NumMul e1 e2) >>= return
+			else if op == Tokens.Divide then
+				parseMulChainTail (NumDiv e1 e2) >>= return
+			else
+				parseMulChainTail (NumMod e1 e2) >>= return
+
+---------------------------------------------------------------------------------------------------
+-- Var Types
+---------------------------------------------------------------------------------------------------
+
+parseVarType :: OWLParser VarType
+parseVarType = (try parseAtomicType) 
+	<|> (try parseArrayType) 
+	<|> (try parsePointerType)
+	<|> (try parseFuncType)
+	<|> (try parseProcType)
+	<|> (parens parseVarType)
+
+parseAtomicType :: OWLParser VarType
+parseAtomicType = do
+	id <- identifier
+	return $ AtomicType id
+
+parseArrayType :: OWLParser VarType
+parseArrayType = do
+	t <- brackets parseVarType
+	return $ ArrayType t 
+
+parsePointerType :: OWLParser VarType
+parsePointerType = do
+	atToken
+	t <- parseVarType
+	return $ PointerType t
+
+parseFuncType :: OWLParser VarType
+parseFuncType = do
+	funcToken
+	params <- parseTypeList
+	ret <- parens parseVarType
+	return $ FuncType params ret
+
+parseProcType :: OWLParser VarType
+parseProcType = do
+	procToken
+	params <- parseTypeList
+	return $ ProcType params
+
+parseTypeList :: OWLParser [VarType]
+parseTypeList = parens (sepBy parseVarType comma)
