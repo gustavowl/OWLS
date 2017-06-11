@@ -168,35 +168,46 @@ parseFuncRet = do
 
 parseAssignment :: OWLParser Statement
 parseAssignment = do
-	var <- parseAssignKey
+	key <- parseAssignKey
 	assignToken
 	expr <- parseExpr
-	return $ Assignment var expr
+	return $ Assignment key expr
 
 parseAssignKey :: OWLParser AssignKey
-parseAssignKey = (try parseAssignField) <|> (try parseAssignEl) <|> parseAssignVar
+parseAssignKey = do
+	optionMaybe (atToken) >>= f where
+		f Nothing = do
+			id <- identifier
+			var <- parseAssignMods $ AssignVar id
+			return var
+		f (Just a) = do
+			ptr <- (try parseAssignKey) <|> (parens parseAssignKey)
+			var <- parseAssignMods ptr
+			return var
 
-parseAssignVar :: OWLParser AssignKey
-parseAssignVar = do
-	name <- identifier
-	return $ AssignVar name
+parseAssignMods :: AssignKey -> OWLParser AssignKey
+parseAssignMods key = do
+	optionMaybe ((try $ parseAssignField key) 
+		<|> (try $ parseAssignEl key)) >>= f where
+			f Nothing = return key
+			f (Just a) = do
+				mods <- parseAssignMods a
+				return mods
 
-parseAssignEl :: OWLParser AssignKey
-parseAssignEl = do
-	var <- parseAssignVar <|> (parens parseAssignKey)
-	indexes <- many1 (brackets parseExpr)
-	return $ indexesToKey var indexes
+parseAssignEl :: AssignKey -> OWLParser AssignKey
+parseAssignEl key = do
+	expr <- brackets (parseExpr)
+	return $ AssignEl key expr
 
-indexesToKey :: AssignKey -> [Expr] -> AssignKey
-indexesToKey key [] = key
-indexesToKey key (a:b) = indexesToKey (AssignEl key a) b
-
-parseAssignField :: OWLParser AssignKey
-parseAssignField = do
-	var <- parseAssignVar <|> (parens parseAssignKey)
+parseAssignField :: AssignKey -> OWLParser AssignKey
+parseAssignField key = do
 	dotToken
 	name <- identifier
-	return $ AssignField var name 
+	return $ AssignField key name 
+
+parseAssignContent :: AssignKey -> OWLParser AssignKey
+parseAssignContent key = do
+	return $ AssignContent key
 
 ---------------------------------------------------------------------------------------------------
 -- Control Flow

@@ -14,19 +14,15 @@ parseExpr :: OWLParser Expr
 parseExpr = parseBoolExpr
 
 parseExprLeaf :: OWLParser Expr
-parseExprLeaf = (try parseChar)
-	<|> (try parseArray)
-	<|> (try parseString)
-	<|> (try parseFuncCall)
-	<|> (try parseReadCall)
-	<|> (try parseReadNatCall)
-	<|> (try parseReadIntCall)
-	<|> (try parseReadRealCall)
-	<|> (try parsePtr)
-	<|> (try parseArrayEl)
-	<|> (try parseField)
-	<|> (try parseID)
-	<|> (parens parseExpr)
+parseExprLeaf = do 
+	leaf <-	(try parseFuncCall)
+		<|> (try parseArray)
+		<|> (try parseString)
+		<|> (try parseChar)
+		<|> (try parseID)
+		<|> (parens parseExpr)
+	mod <- parseLeafMods leaf
+	return mod
 
 ---------------------------------------------------------------------------------------------------
 -- General Leaf
@@ -83,29 +79,41 @@ parseArrayCall = do
 	args <- parens $ sepBy1 parseExpr comma
 	return $ ArrayCall args 
 
-parseArrayEl :: OWLParser Expr
-parseArrayEl = do
-	array <- parseID <|> (parens parseExpr)
-	indexes <- many1 (brackets parseExpr)
-	return $ multiArrayEl array indexes
+---------------------------------------------------------------------------------------------------
+-- General Struct Fields / Array Elements / Pointer Content & Addr
+---------------------------------------------------------------------------------------------------
 
-multiArrayEl :: Expr -> [Expr] -> Expr
-multiArrayEl array [] = array
---multiArrayEl array (i:indexes) = ArrayEl (multiArrayEl array indexes) i
-multiArrayEl array (i:indexes) = multiArrayEl (ArrayEl array i) indexes
+parseLeafMods :: Expr -> OWLParser Expr
+parseLeafMods leaf = do
+	optionMaybe ((try $ parseArrayEl leaf) 
+		<|> (try $ parseField leaf) 
+		<|> (try $ parseContent leaf) 
+		<|> (try $ parseAddr leaf)) >>= f where
+			f Nothing = return leaf
+			f (Just e) = do
+				mods <- parseLeafMods e
+				return mods
 
-parseField :: OWLParser Expr
-parseField = do
-	struct <- parseID <|> (parens parseExpr)
+parseArrayEl :: Expr -> OWLParser Expr
+parseArrayEl array = do
+	index <- brackets parseExpr
+	return $ ArrayEl array index
+
+parseField :: Expr -> OWLParser Expr
+parseField struct = do
 	dotToken
 	field <- identifier
 	return $ Field struct field
 
-parsePtr :: OWLParser Expr
-parsePtr = do
+parseContent :: Expr -> OWLParser Expr
+parseContent ptr = do
 	atToken
-	ptr <- parseID <|> (parens parseExpr)
-	return $ Ptr ptr
+	return $ Content ptr
+
+parseAddr :: Expr -> OWLParser Expr
+parseAddr var = do
+	dollarToken
+	return $ Addr var
 
 ---------------------------------------------------------------------------------------------------
 -- General Literals
@@ -229,6 +237,9 @@ parseNumExpr = parseAddChain
 parseNumLeaf :: OWLParser Expr
 parseNumLeaf = (try parseNumUnary)
 	<|> (try parseNumber)
+	<|> (try parseReadNatCall)
+	<|> (try parseReadIntCall)
+	<|> (try parseReadRealCall)
 	<|> parseExprLeaf
 
 ---------------------------------------------------------------------------------------------------

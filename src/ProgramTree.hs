@@ -48,7 +48,8 @@ data Expr = BoolLit Bool
 	| ArrayCall [Expr]
 	| SizeofCall Expr
 	| Field Expr String
-	| Ptr Expr
+	| Content Expr
+	| Addr Expr
 	| BoolNot Expr
 	| BoolAnd Expr Expr
 	| BoolOr Expr Expr
@@ -78,6 +79,7 @@ data VarType = AtomicType String
 data AssignKey = AssignVar String
 	| AssignEl AssignKey Expr
 	| AssignField AssignKey String
+	| AssignContent AssignKey
 	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------
