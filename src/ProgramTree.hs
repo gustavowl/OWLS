@@ -68,7 +68,7 @@ data Expr = BoolLit Bool
 data VarType = AtomicType String 
 	| ArrayType VarType
 	| PointerType VarType
-	| FuncType [VarType] VarType -- params, retorno
+	| FuncType [VarType] VarType
 	| ProcType [VarType]
 	deriving (Eq,Show)
 

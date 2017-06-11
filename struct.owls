@@ -1,24 +1,25 @@
 
 struct fracao {
-	a : int = 0;
+	a : int = 1;
 	b : nat = 1;
 }
 
-struct lpcp {
-	drama : int;
-	choro : real;
+struct fracao1 {
+	a : fracao;
+	b : nat = 1;
 }
 
-x : fracao;
-zzz : lpcp;
+x : fracao1;
 
-func soma(x : fracao, y : int) : int {
-	x.a = x.a + y * x.b;
-	return x;
+func soma(x : fracao1) : int {
+	return (x.a).b;
 }
 
 main () {
-	y : int = 2;
-	x = soma(x, y);
-	return (x.a / x.b);
+	x.b = 2;
+	a : int;
+	a = soma(x);
+	write(a);
+	return 0;
+	#return (x.a / x.b);
 }

@@ -71,7 +71,7 @@ getScopeID :: String -> OWLState -> IO Integer
 getScopeID name (stack, _) = do
 	let id = searchVarScope name stack
 	if id == -1 then do
-		print stack
+		--print stack
 		fail $ "Variable " ++ name ++ " not found."
 	else
 		return id
@@ -251,12 +251,15 @@ getDecName (Procedure name p body) = name
 initState :: [UserType] -> OWLState
 initState types = ([(0, -1, [])], types)
 
+getListUserTypes :: OWLState -> [UserType]
+getListUserTypes (_, userTypes) = userTypes
+
 getUserType :: String -> [UserType] -> UserType
 getUserType name1 ((name2, decs):types) = 
 	if name1 == name2 then (name2, decs) else getUserType name1 types
 
 initEachField :: [Declaration] -> [UserType] -> [VarValue]
-initEachField [] types = []
+initEachField [] _ = []
 initEachField (h:decs) types = 
 	let t = getDecType h in (getInitValue t types) : initEachField decs types
 

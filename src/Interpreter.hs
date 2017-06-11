@@ -226,17 +226,23 @@ runStatement (ProcCall name args) state1 = do
 
 runStatement (WriteCall expr) state1 = do 
 	(t, v, state2) <- evalExpr expr state1
-	printValue t v -- Ver printValue (note que falta definir como imprimir alguns tipos)
+	printValue t v 
 	return (state2, Continue)
 
 -- TODO: Criar pros outros tipos aqui.
-runStatement (Assignment (AssignVar name) assign) state1 = do -- minha versão está dando erro de tipo
+runStatement (Assignment (AssignVar name) assign) state1 = do 
 	scopeID <- getScopeID name state1
 	let (varTypeAssign, _) = getVar (name, scopeID) state1
 	(varType, value, state2) <- evalExpr assign state1
-	-- TODO verificar tipo varType x varTypeAssign 
+	convertType varType varTypeAssign
 	let state3 = updateVar value (name, scopeID) state2
 	return (state3, Continue)
+
+runStatement (Assignment (AssignEl bla1 bla2) assign) state1 = do 
+	return (state1, Continue) -- TODO
+
+runStatement (Assignment (AssignField ble1 ble2) assign) state1 = do 
+	return (state1, Continue) -- TODO
 
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do
@@ -249,13 +255,16 @@ printValue _ (NumberValue d) = do
 	putStr $ (show (round d))
 printValue t (ArrayValue l e) = do
 	printValueArray t l e 
-
+printVaue _ _ =
+	print "TODO"-- TODO: imprimir outros tipos
+	
 printValueArray t l (e: e1) = do
 	printValue t e  
 	if l > 1 then
 		printValueArray t (l - 1) e1
 	else
 		putStr "" 
+
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
@@ -267,6 +276,7 @@ addDec (Var name varType (Just e)) state1 = do
 	(actualType, value, state2) <- evalExpr e state1
 	convertType varType actualType
 	let state3 = addVarDec name varType state2
+	--print state3
 	scopeID <- getScopeID name state3
 	return $ updateVar value (name, scopeID) state3
 
@@ -298,6 +308,16 @@ evalNumExpr expr state1 = do
 
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
+
+getFieldValue :: String -> [Declaration] -> [VarValue] -> (VarType, VarValue)
+getFieldValue _ [] [] = (nullVarType, nullVarValue)
+getFieldValue name1 (d:decs) (v:varValues) = do 
+	let name2 = getDecName d
+	let t = getDecType d
+	if name1 == name2 then
+		(t, v)
+	else do
+		getFieldValue name1 decs varValues
 
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
@@ -337,6 +357,13 @@ evalExpr (SizeofCall expr) state1 = do
 	(t, array, state2) <- evalExpr expr state1
 	let size = 0 -- TODO: pegar tamanho da array
 	return (AtomicType "nat", NumberValue size, state2)
+
+evalExpr (Field expr name) state1 = do 
+	((AtomicType userTypeName), (UserValue v), state2) <- evalExpr expr state1
+	let userTypes = getListUserTypes state2
+	let (_, decs) = (getUserType userTypeName userTypes)
+	let (fieldType, fieldValue) = getFieldValue name decs v
+	return (fieldType, fieldValue, state2)
 
 -- TODO: array element, pointer, field
 
