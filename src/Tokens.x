@@ -93,6 +93,8 @@ tokens :-
   array                                { \p s -> newToken p Array}
   sizeof                               { \p s -> newToken p Sizeof}
   const                                { \p s -> newToken p Const}
+  new                                  { \p s -> newToken p New}
+  delete                               { \p s -> newToken p Delete}
   $digit+                              { \p s -> newToken p (Nat (read s))}
   [\-]?@decimal+                       { \p s -> newToken p (Int (read s))}
   [\-]?@decimal+ \. @decimal+          { \p s -> newToken p (Real (read s))}
@@ -158,6 +160,8 @@ data TokenSymbol =
   Break  |
   Struct |
   Const |
+  New |
+  Delete |
   Bool Bool |
   Id String |
   Nat Double |

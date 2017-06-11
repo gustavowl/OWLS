@@ -1,13 +1,13 @@
 
-func conc(s1 : char[], s2 : char[]) : char[] {
+func conc(s1 : [char], s2 : [char]) : [char] {
 	return s1; # TODO
 }
 
 main() {
 	x : char = ' ';
-	s1 : char[] = "hello";
-	s2 : char[] = {x};
-	s3 : char[] = "world";
+	s1 : [char] = "hello";
+	s2 : [char] = {x};
+	s3 : [char] = "world";
 	write(conc(s1, conc(s2, s3)));
 	return 0;
 }

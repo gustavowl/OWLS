@@ -6,41 +6,28 @@ import Lexer
 import Expr
 
 parseVarType :: OWLParser VarType
-parseVarType = try parsePointerType 
-	<|> try parseArrayType
-	<|> try parseFuncType 
-	<|> try parseProcType 
-	<|> parseAtomicType
-
-parseTypeLeaf :: OWLParser VarType
-parseTypeLeaf = parseAtomicType <|> (parens parseVarType)
+parseVarType = (try parseAtomicType) 
+	<|> (try parseArrayType) 
+	<|> (try parsePointerType)
+	<|> (try parseFuncType)
+	<|> (try parseProcType)
+	<|> (parens parseVarType)
 
 parseAtomicType :: OWLParser VarType
 parseAtomicType = do
 	id <- identifier
 	return $ AtomicType id
 
+parseArrayType :: OWLParser VarType
+parseArrayType = do
+	t <- brackets parseVarType
+	return $ ArrayType t 
+
 parsePointerType :: OWLParser VarType
 parsePointerType = do
 	atToken
-	t <- parseTypeLeaf 
+	t <- parseVarType
 	return $ PointerType t
-
-parseArrayType :: OWLParser VarType
-parseArrayType = do
-	t <- parseTypeLeaf
-	d <- many1 parseEmptyBrackets
-	return $ multiArray t d
-
-parseEmptyBrackets :: OWLParser ()
-parseEmptyBrackets = do
-	lbrace
-	rbrace
-	return ()
-
-multiArray :: VarType -> [()] -> VarType
-multiArray typ [] = typ
-multiArray typ (_:t) = ArrayType $ multiArray typ t
 
 parseFuncType :: OWLParser VarType
 parseFuncType = do

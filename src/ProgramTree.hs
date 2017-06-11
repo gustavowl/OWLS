@@ -39,6 +39,9 @@ data Expr = BoolLit Bool
 	| CharLit Char
 	| ArrayLit [Expr]
 	| ID String
+	| Addr String
+	| Content Expr
+	| Field Expr String
 	| ArrayEl Expr Expr
 	| FuncCall String [Expr]
 	| ReadCall
@@ -47,9 +50,6 @@ data Expr = BoolLit Bool
 	| ReadRealCall
 	| ArrayCall [Expr]
 	| SizeofCall Expr
-	| Field Expr String
-	| Content Expr
-	| Addr Expr
 	| BoolNot Expr
 	| BoolAnd Expr Expr
 	| BoolOr Expr Expr

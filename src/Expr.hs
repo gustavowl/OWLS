@@ -19,6 +19,7 @@ parseExprLeaf = do
 		<|> (try parseArray)
 		<|> (try parseString)
 		<|> (try parseChar)
+		<|> (try parseAddr)
 		<|> (try parseID)
 		<|> (parens parseExpr)
 	mod <- parseLeafMods leaf
@@ -87,8 +88,7 @@ parseLeafMods :: Expr -> OWLParser Expr
 parseLeafMods leaf = do
 	optionMaybe ((try $ parseArrayEl leaf) 
 		<|> (try $ parseField leaf) 
-		<|> (try $ parseContent leaf) 
-		<|> (try $ parseAddr leaf)) >>= f where
+		<|> (try $ parseContent leaf)) >>= f where
 			f Nothing = return leaf
 			f (Just e) = do
 				mods <- parseLeafMods e
@@ -109,11 +109,6 @@ parseContent :: Expr -> OWLParser Expr
 parseContent ptr = do
 	atToken
 	return $ Content ptr
-
-parseAddr :: Expr -> OWLParser Expr
-parseAddr var = do
-	dollarToken
-	return $ Addr var
 
 ---------------------------------------------------------------------------------------------------
 -- General Literals
@@ -137,6 +132,12 @@ parseString = do
 stringToArray :: String -> [Expr]  
 stringToArray [] = []  
 stringToArray (x:xs) = (CharLit x) : stringToArray xs
+
+parseAddr :: OWLParser Expr
+parseAddr = do
+	dollarToken
+	var <- identifier <|> parens identifier
+	return $ Addr var
 
 ---------------------------------------------------------------------------------------------------
 -- Boolean Expr

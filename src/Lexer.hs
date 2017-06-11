@@ -59,6 +59,16 @@ returnToken = tokenPrim show updatePos (simpleGetToken Return)
 breakToken :: TokenParser
 breakToken = tokenPrim show updatePos (simpleGetToken Break)
 
+newToken :: TokenParser
+newToken = tokenPrim show updatePos (simpleGetToken New)
+
+deleteToken :: TokenParser
+deleteToken = tokenPrim show updatePos (simpleGetToken Delete)
+
+---------------------------------------------------------------------------------------------------
+-- Primitive sub-programs
+---------------------------------------------------------------------------------------------------
+
 readToken :: TokenParser
 readToken = tokenPrim show updatePos (simpleGetToken Read)
 

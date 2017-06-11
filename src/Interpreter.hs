@@ -4,7 +4,7 @@ import Data.Fixed
 import System.IO
 import ProgramTree
 import ProgramState
-import Expr --needed for getting leaf nodes values
+import Types
 import Data.List
 
 runProgram :: Program -> IO()
@@ -229,19 +229,21 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v 
 	return (state2, Continue)
 
--- TODO: Criar pros outros tipos aqui.
 runStatement (Assignment (AssignVar name) assign) state1 = do 
 	scopeID <- getScopeID name state1
-	let (varTypeAssign, _) = getVar (name, scopeID) state1
-	(varType, value, state2) <- evalExpr assign state1
-	convertType varType varTypeAssign
+	let (expectedType, _) = getVar (name, scopeID) state1
+	(actualType, value, state2) <- evalExpr assign state1
+	convertType expectedType actualType
 	let state3 = updateVar value (name, scopeID) state2
 	return (state3, Continue)
 
-runStatement (Assignment (AssignEl bla1 bla2) assign) state1 = do 
+runStatement (Assignment (AssignEl array index) assign) state1 = do 
 	return (state1, Continue) -- TODO
 
-runStatement (Assignment (AssignField ble1 ble2) assign) state1 = do 
+runStatement (Assignment (AssignField struct field) assign) state1 = do 
+	return (state1, Continue) -- TODO
+
+runStatement (Assignment (AssignContent ptr) assign) state1 = do 
 	return (state1, Continue) -- TODO
 
 printValue :: VarType -> VarValue -> IO()
@@ -264,7 +266,6 @@ printValueArray t l (e: e1) = do
 		printValueArray t (l - 1) e1
 	else
 		putStr "" 
-
 
 ---------------------------------------------------------------------------------------------------
 -- Declarations
@@ -326,16 +327,10 @@ stringToDouble x = read x :: Double
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
 ---------------------------------------------------------------------------------------------------
--- Evaluate Leaves
+-- Evaluate Functions
 ---------------------------------------------------------------------------------------------------
 
--- Variable.
-evalExpr (ID name) state = do
-	scopeID <- getScopeID name state
-	let (t, v) = getVar (name, scopeID) state
-	return (t, v, state)
-
--- Funcion call.
+-- Generic funcion call.
 evalExpr (FuncCall name args) state1 = do
 	scopeID <- getScopeID name state1
 	(t, v, state2) <- callFunction (name, scopeID) args state1
@@ -378,11 +373,30 @@ evalExpr (ArrayCall exprs) state = do
 	-- inferir o tipo da array de acordo com o elemento inicial
 	return (nullVarType, nullVarValue, state)
 
+-- Sizeof call.
 evalExpr (SizeofCall expr) state1 = do
 	(t, array, state2) <- evalExpr expr state1
 	let size = 0 -- TODO: pegar tamanho da array
 	return (AtomicType "nat", NumberValue size, state2)
 
+---------------------------------------------------------------------------------------------------
+-- Variables
+---------------------------------------------------------------------------------------------------
+
+-- Variable.
+evalExpr (ID name) state = do
+	scopeID <- getScopeID name state
+	let (t, v) = getVar (name, scopeID) state
+	return (t, v, state)
+
+-- Pointer content.
+evalExpr (Content expr) state1 = do
+	(pt, pv, state2) <- evalExpr expr state1
+	(name, scopeID) <- getPointerValue pv
+	let (t, v) = getVar (name, scopeID) state2
+	return (t, v, state2)
+
+-- Struct field.
 evalExpr (Field expr name) state1 = do 
 	((AtomicType userTypeName), (UserValue v), state2) <- evalExpr expr state1
 	let userTypes = getListUserTypes state2
@@ -390,7 +404,20 @@ evalExpr (Field expr name) state1 = do
 	let (fieldType, fieldValue) = getFieldValue name decs v
 	return (fieldType, fieldValue, state2)
 
--- TODO: array element, pointer, field
+-- Array elements.
+evalExpr (ArrayEl aexpr iexpr) state1 = do 
+	(at, av, state2) <- evalExpr aexpr state1
+	(size, array) <- getArrayValue av
+	typ <- getArrayType at
+	(it, iv, state3) <- evalExpr iexpr state2
+	convertType (AtomicType "nat") it
+	index <- getNumberValue iv
+	let i = round index
+	if i >= size then do
+		fail $ "Index out of bounds: " ++ show i
+	else do
+		let el = array !! (fromInteger i)
+		return (typ, el, state3)
 
 ---------------------------------------------------------------------------------------------------
 -- Evaluate Literals
@@ -576,7 +603,7 @@ createUntypedArrayValue (h:t) state1 = do
 	(typ, expr, state2) <- evalExpr h state1
 	(exprs, state3) <- createArrayValues t typ state2
 	let size = 1 + (toInteger (length t))
-	return (typ, ArrayValue size (expr:exprs), state3)
+	return (ArrayType typ, ArrayValue size (expr:exprs), state3)
 
 createArrayValues :: [Expr] -> VarType -> OWLState -> IO ([VarValue], OWLState)
 createArrayValues [] typ state = do return ([], state)

@@ -1,6 +1,7 @@
 module ProgramState where
 
 import ProgramTree
+import Types
 
 ---------------------------------------------------------------------------------------------------
 -- State
@@ -14,24 +15,6 @@ type Scope = (Integer, Integer, [TableEntry])
 
 -- Nome, Tipo, Valor
 type TableEntry = (String, VarType, VarValue)
-
----------------------------------------------------------------------------------------------------
--- Values
----------------------------------------------------------------------------------------------------
-
--- Description of variable value (primitive, struct or array)
-data VarValue = NumberValue Double 
-	| UserValue [VarValue] 
-	| ArrayValue Integer [VarValue]
-	| PointerValue Key
-	| CharValue Char
-	| BoolValue Bool
-	| FuncValue Integer [Declaration] [Statement] -- ancestral, params (tipo + nome), corpo
-	| ProcValue Integer [Declaration] [Statement]
-	deriving (Eq,Show)
-
--- Name + scope ID
-type Key = (String, Integer)
 
 ---------------------------------------------------------------------------------------------------
 -- Gambiarras
@@ -50,17 +33,13 @@ nullVarValue :: VarValue
 nullVarValue = NumberValue 12345666
 
 ---------------------------------------------------------------------------------------------------
--- Symbol Table Access
+-- Scope
 ---------------------------------------------------------------------------------------------------
 
 -- Cria um novo escopo para uma chamada de função cujo ancestral é o dado como argumento.
 newScope :: Integer -> OWLState -> OWLState
 newScope newParentID ((currentID, parentID, table):scopeList, types) = 
 	((currentID + 1, newParentID, []):(currentID, parentID, table):scopeList, types)
-
----------------------------------------------------------------------------------------------------
--- Scope Resolution
----------------------------------------------------------------------------------------------------
 
 getScope :: Integer -> OWLState -> Scope
 getScope scopeID (stack, _) = f (popToScope scopeID stack) where
@@ -158,82 +137,10 @@ addProcDec name params body ([(a, b, table)], types) = let
 	newProcDec = (name, ProcType (extractParamTypes params), ProcValue a params body) in
 	([(a, b, newProcDec:table)], types)
 
-extractParamType :: Declaration -> VarType
-extractParamType (Var _ varType _) = varType
-extractParamType (Function _ params ret _) = FuncType (extractParamTypes params) ret
-extractParamType (Procedure _ params _) = ProcType (extractParamTypes params)
-
-extractParamTypes :: [Declaration] -> [VarType]
-extractParamTypes [] = []
-extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)
-
-{-
-setVarValue :: VarType -> (Maybe Expr) -> State -> VarValue
-setVarValue varType (Just expr) state = getInitValue varType -- TODO: avaliar expressão
-setVarValue varType Nothing _ = getInitValue varType 
-
--- scope é id do ancestral
-addDec :: Declaration -> Integer -> [TableEntry] -> [TableEntry]
-addDec (Var name varType expr) _ table = (name, varType, setVarValue varType expr state) : table
-addDec (Function name params ret body) scope table = 
-	(name, FuncType (extractParamTypes params) ret, FuncValue scope params body) : table
-addDec (Procedure name params body) scope table = 
-	(name, ProcType (extractParamTypes params), ProcValue scope params body) : table
-
--- lista de declaração, id do escopo atual
-addGlobalDecsTable :: [Declaration] -> Integer -> [TableEntry] -> [TableEntry]
-addGlobalDecsTable [] _ table = table
-addGlobalDecsTable (h:decs) scope table = addGlobalDecsTable decs scope (addDec h scope table)
-
-addGlobalDecs :: [Declaration] -> OWLState -> OWLState
-addGlobalDecs decs ([(current, ances, table)], userType) = 
-	let newState = addGlobalDecsTable decs current table in ([(current, ances, newTable)], userType)
-
-addLocalDec :: Declaration -> OWLState -> OWLState
-addLocalDec (Var name t Nothing) state = state -- TODO
-addLocalDec (Var name t (Just v)) state = state -- TODO
-addLocalDec _ state = state -- TODO
-
--}
-
 ---------------------------------------------------------------------------------------------------
--- Type Convertion
+-- Declaration info
 ---------------------------------------------------------------------------------------------------
 
-getNumberType :: VarType -> IO String
-getNumberType (AtomicType "nat") = do return "nat"
-getNumberType (AtomicType "int") = do return "int"
-getNumberType (AtomicType "real") = do return "real"
-getNumberType a = do fail $ show a ++ "is not a number."
-
-getNumberValue :: VarValue -> IO Double
-getNumberValue (NumberValue n) = do return n
-getNumberValue a = fail "NAN"
-
-getBoolValue :: VarValue -> IO Bool
-getBoolValue (BoolValue v) = do return v
-getBoolValue a = fail "Not a Bool"
-
--- ExpectedType, ActualType, Final Type
-convertType :: VarType -> VarType -> IO VarType
-convertType (AtomicType "int") (AtomicType "nat") = do return $ AtomicType "int"
-convertType (AtomicType "real") (AtomicType "nat") = do return $ AtomicType "real"
-convertType (AtomicType "real") (AtomicType "int") = do return $ AtomicType "real"
-convertType a b = do 
-	if a == b then
-		return a
-	else
-		fail $ "Could not convert " ++ show b ++ " to " ++ show a ++ "."
-
--- ExpectedType, ActualType
-canConvertType :: VarType -> VarType -> Bool
-canConvertType (AtomicType "int") (AtomicType "nat") = True
-canConvertType (AtomicType "real") (AtomicType "nat") = True
-canConvertType (AtomicType "real") (AtomicType "int") = True
-canConvertType a b = a == b
-
--- TODO
--- ...
 getDecType :: Declaration -> VarType
 getDecType (Var name t expr) = t
 getDecType (Function name p ret body) = (FuncType (extractParamTypes p) ret)
@@ -243,6 +150,16 @@ getDecName :: Declaration -> String
 getDecName (Var name t expr) = name
 getDecName (Function name p ret body) = name
 getDecName (Procedure name p body) = name
+
+extractParamType :: Declaration -> VarType
+extractParamType (Var _ varType _) = varType
+extractParamType (Function _ params ret _) = FuncType (extractParamTypes params) ret
+extractParamType (Procedure _ params _) = ProcType (extractParamTypes params)
+
+extractParamTypes :: [Declaration] -> [VarType]
+extractParamTypes [] = []
+extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)
+
 ---------------------------------------------------------------------------------------------------
 -- Initial Values
 ---------------------------------------------------------------------------------------------------
@@ -264,6 +181,10 @@ initEachField (h:decs) types =
 	let t = getDecType h in (getInitValue t types) : initEachField decs types
 
 getInitValue :: VarType -> [UserType] -> VarValue
+getInitValue (PointerType _) _ = PointerValue ("", 0)
+getInitValue (ArrayType _) _ = ArrayValue 0 []
+getInitValue (FuncType _ _) _ = FuncValue (-1) [] []
+getInitValue (ProcType _ ) _ = ProcValue (-1) [] []
 getInitValue (AtomicType "nat") _ = NumberValue 0
 getInitValue (AtomicType "int") _ = NumberValue 0
 getInitValue (AtomicType "real") _ = NumberValue 0
@@ -273,7 +194,3 @@ getInitValue (AtomicType name) types = do
 	let (_, decs) = (getUserType name types)
 	let vars = (initEachField decs types)
 	(UserValue vars)
-getInitValue (PointerType _) _ = PointerValue ("", 0)
-getInitValue (ArrayType _) _ = ArrayValue 0 []
-getInitValue (FuncType _ _) _ = FuncValue (-1) [] []
-getInitValue (ProcType _ ) _ = ProcValue (-1) [] []

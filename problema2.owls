@@ -5,8 +5,8 @@ main() {
 	c : int;
 	d : int;
 		
-	write ("Digite um número inteiro, caso deseje sair o mesmo deve ser negativo: \n");
-	x = readReal();
+	write ("Digite um número natural, ou um inteiro negativo caso deseje sair: \n");
+	x = readInt();
 
 	while(x >= 0){
 		if(0 <= x && x <= 25){
@@ -21,8 +21,8 @@ main() {
 		if(76 <= x && x <= 100){
 			d = c + 1;
 		}
-		write ("Digite um número inteiro, caso deseje sair o mesmo deve ser negativo: \n");
-		x = readReal();
+		write ("Digite um número natural, ou um inteiro negativo caso deseje sair: \n");
+		x = readInt();
 	}
 
 	write ("Voce digitou:\n");
