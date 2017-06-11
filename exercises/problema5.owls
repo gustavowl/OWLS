@@ -1,0 +1,36 @@
+func mdc (m : int, n : int) : int {
+	if(m % n == 0) {
+		return n;
+	}
+	else {
+		if(n % m == 0){
+			return m;
+		}
+		else {
+			if(m > n){
+				return mdc(n, m%n);
+			}
+			else{
+				return mdc(m, n%m);
+			}
+		}
+	}	
+}
+
+main() {
+	m : int;
+	n : int;
+	r : int;
+	
+	write ("Digite dois numeros inteiros: \n");
+	m = readInt();
+	n = readInt();
+
+	r = mdc(m,n);
+	write ("O mdc de m e n é: ");
+	write (r);
+	
+
+	write("\n");
+	return 0;
+}

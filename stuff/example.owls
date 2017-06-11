@@ -1,0 +1,60 @@
+x : int = 1;
+
+a : int = 5;
+
+func bla (a : int) : int {
+	if (a == 10) {
+		return a + 1;
+	} else {
+		return a + 2;
+	}
+}
+
+func bla42 () : int {
+	return 42;
+}
+
+# const y : int = 10;
+
+# bla2 : int[7] = {1, 20, 3, 4, 5, 6, 7};
+
+# bla3 : @int;
+
+# struct blah { x : int; }
+
+# func blo (a : func(b : int)[int], b : int)
+
+proc ble () {
+	a = a - 1;
+	write(a * 100);
+	if (a > 0) {	
+		ble();
+	}
+}
+
+main() {
+	a : int = 10;
+	x = 12;
+	write(bla(12));
+	if (a != x) {
+		write(a + 10000);
+		write('\n');
+		x = bla42() + 17 + bla42();
+		write(x);
+		ble();
+	} else {
+		write(a);
+	}
+	x = 0;
+	while (x < 20) {
+		x = bla(x);
+		write(x);
+		write('\n');
+		if (x > 17) {
+			write(2112);
+			break;
+			write(2113); #this does not run. NOICE!
+		}
+	}
+	return 93;
+}

@@ -1,0 +1,67 @@
+
+main() {
+	a : real;
+	b : real;
+	
+	write ("Digite um número racional: \n");
+	a = readReal();
+
+	write ("Digite outro número racional: \n");
+	b = readReal();
+
+	if (a == b) {
+		write("Os racionais são iguais\n");
+	}else {
+		write ("Os numeros racionais sao diferentes!\n");
+	}
+	
+	write ("Soma a + b: ");
+	write (a + b);
+	write("\n");
+
+	write ("Soma b + a: ");
+	write (b + a);
+	write("\n");
+
+	write ("Negação de a: ");
+	write (-a);
+	write("\n");
+
+	write ("Negação de b: ");
+	write (-b);
+	write("\n");
+
+	write ("Subtração a - b: ");
+	write(a - b);
+	write("\n");
+
+	write ("Subtração b - a: ");
+	write(b - a);
+	write("\n");
+
+	write ("Produto a*b: ");
+	write(a * b);
+	write("\n");
+
+	write ("Produto b*a: ");
+	write(b * a);
+	write("\n");
+
+	write ("Inverso de a: ");
+	write(1/a);
+	write("\n");
+
+	write ("Inverso de b: ");
+	write(1/b);
+	write("\n");
+
+	write ("Divisao a/b:");
+	write(a/b);
+	write("\n");
+
+	write ("Divisao b/a:");
+	write(b/a);
+
+	write("\n");
+	return 0;
+}

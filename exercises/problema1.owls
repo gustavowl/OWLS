@@ -1,0 +1,17 @@
+
+main() {
+	a : real;
+	b : real;
+	c : int;
+
+	write ("Digite dois numeros racionais: \n");
+	a = readReal();
+	b = readReal();
+
+	write ("Digite um numero inteiro: \n");
+	c = readInt();
+
+	write((a*a - b) + c);
+	write("\n");
+	return 0;
+}

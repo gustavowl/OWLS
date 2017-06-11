@@ -257,6 +257,10 @@ printValue _ (NumberValue d) = do
 	putStr $ (show (round d))
 printValue t (ArrayValue l e) = do
 	printValueArray t l e 
+printValue _ (PointerValue (name, scope)) = do
+	putStr $ "(" ++ name ++ " ,"
+	putStr (show scope)
+	putStr ")"
 printVaue _ _ =
 	print "TODO"-- TODO: imprimir outros tipos
 	
