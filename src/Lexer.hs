@@ -62,6 +62,15 @@ breakToken = tokenPrim show updatePos (simpleGetToken Break)
 readToken :: TokenParser
 readToken = tokenPrim show updatePos (simpleGetToken Read)
 
+readNatToken :: TokenParser
+readNatToken = tokenPrim show updatePos (simpleGetToken ReadNat)
+
+readIntToken :: TokenParser
+readIntToken = tokenPrim show updatePos (simpleGetToken ReadInt)
+
+readRealToken :: TokenParser
+readRealToken = tokenPrim show updatePos (simpleGetToken ReadReal)
+
 writeToken :: TokenParser
 writeToken = tokenPrim show updatePos (simpleGetToken Write)
 

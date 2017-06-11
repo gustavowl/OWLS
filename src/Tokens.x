@@ -86,6 +86,9 @@ tokens :-
   return                               { \p s -> newToken p Return}
   break                                { \p s -> newToken p Break}
   read                                 { \p s -> newToken p Read}
+  readNat                              { \p s -> newToken p ReadNat}
+  readInt                              { \p s -> newToken p ReadInt}
+  readReal                             { \p s -> newToken p ReadReal}
   write                                { \p s -> newToken p Write}
   array                                { \p s -> newToken p Array}
   sizeof                               { \p s -> newToken p Sizeof}
@@ -110,6 +113,9 @@ data TokenSymbol =
   Func |
   Proc |
   Read |
+  ReadNat |
+  ReadInt |
+  ReadReal |
   Write |
   Array |
   Sizeof |

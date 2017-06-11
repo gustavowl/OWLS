@@ -42,6 +42,9 @@ data Expr = BoolLit Bool
 	| ArrayEl Expr Expr
 	| FuncCall String [Expr]
 	| ReadCall
+	| ReadNatCall
+	| ReadIntCall
+	| ReadRealCall
 	| ArrayCall [Expr]
 	| SizeofCall Expr
 	| Field Expr String
