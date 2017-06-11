@@ -1,0 +1,7 @@
+main() {
+	x : int = 10;
+	ptr : @int = $x;
+	write(@ptr);
+	write('\n');
+	return 0;
+}

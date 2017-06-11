@@ -27,9 +27,12 @@ main() {
 	n = readInt();
 
 	r = mdc(m,n);
-	write ("O mdc de m e n é: ");
+	write ("O mdc de ");
+	write (m);
+	write (" e ");
+	write (n);
+	write (" é: ");
 	write (r);
-	
 
 	write("\n");
 	return 0;

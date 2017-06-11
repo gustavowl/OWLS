@@ -384,10 +384,10 @@ evalExpr (SizeofCall expr) state1 = do
 	return (AtomicType "nat", NumberValue size, state2)
 
 -- New call.
-evalExpr (NewCall typ) state1 = do
-	let name = "12345" -- TODO: adicionar ao state um contador para ser a key da variável
-	let state2 = addVarDec name typ state1
-	return (PointerType typ, PointerValue (name, 0), state2)
+evalExpr (NewCall typ) (a, count, b, c) = do
+	let name = show count
+	let state = addVarDec name typ (a, count + 1, b, c)
+	return (PointerType typ, PointerValue (name, 0), state)
 
 ---------------------------------------------------------------------------------------------------
 -- Variables
