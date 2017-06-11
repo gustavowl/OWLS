@@ -19,6 +19,9 @@ parseExprLeaf = (try parseChar)
 	<|> (try parseString)
 	<|> (try parseFuncCall)
 	<|> (try parseReadCall)
+	<|> (try parseReadNatCall)
+	<|> (try parseReadIntCall)
+	<|> (try parseReadRealCall)
 	<|> (try parsePtr)
 	<|> (try parseArrayEl)
 	<|> (try parseField)
@@ -39,6 +42,27 @@ parseFuncCall = do
 	func <- identifier
 	args <- parens $ sepBy parseExpr comma
 	return $ FuncCall func args
+
+parseReadNatCall :: OWLParser Expr
+parseReadNatCall = do
+	readNatToken
+	lparen
+	rparen
+	return $ ReadNatCall
+
+parseReadIntCall :: OWLParser Expr
+parseReadIntCall = do
+	readIntToken
+	lparen
+	rparen
+	return $ ReadIntCall
+
+parseReadRealCall :: OWLParser Expr
+parseReadRealCall = do
+	readRealToken
+	lparen
+	rparen
+	return $ ReadRealCall
 
 parseReadCall :: OWLParser Expr
 parseReadCall = do

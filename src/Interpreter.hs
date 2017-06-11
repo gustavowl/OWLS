@@ -1,4 +1,4 @@
-module Interpreter where
+	module Interpreter where
 
 import Data.Fixed
 import System.IO
@@ -299,6 +299,10 @@ evalNumExpr expr state1 = do
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
 
+
+stringToDouble :: String -> Double
+stringToDouble x = read x :: Double
+
 -- Calcula o valor da expressão
 evalExpr :: Expr -> OWLState -> IO (VarType, VarValue, OWLState)
 
@@ -324,6 +328,28 @@ evalExpr (ReadCall) state = do
 	let size = genericLength line
 	let expr = ArrayValue size $ convertArrayCharToExpr line 
 	return (AtomicType "char", expr, state) -- ADD ArrayValue
+
+-- Read call.
+evalExpr (ReadNatCall) state = do
+	line <- getLine 
+	let value = stringToDouble line 
+	let expr = NumberValue value
+	if value < 0 then
+		fail  "Number not Natural"
+	else
+		return (AtomicType "nat", expr, state) -- ADD ArrayValue
+
+-- Read call.
+evalExpr (ReadIntCall) state = do
+	line <- getLine 
+	let expr = NumberValue $ stringToDouble line 
+	return (AtomicType "int", expr, state) -- ADD ArrayValue
+
+-- Read call.
+evalExpr (ReadRealCall) state = do
+	line <- getLine 
+	let expr = NumberValue $ stringToDouble line 
+	return (AtomicType "real", expr, state) -- ADD ArrayValue
 
 -- Array call.
 evalExpr (ArrayCall exprs) state = do
