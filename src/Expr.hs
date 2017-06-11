@@ -316,7 +316,7 @@ parseMulChainTail e1 = do
 	optionMaybe (timesToken <|> divideToken <|> modulusToken) >>= f where
 		f Nothing = do return e1
 		f (Just op) = do
-			e2 <- parseMulChain
+			e2 <- parseNumLeaf
 			if op == Tokens.Times then
 				parseMulChainTail (NumMul e1 e2) >>= return
 			else if op == Tokens.Divide then
