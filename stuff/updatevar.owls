@@ -1,0 +1,22 @@
+func bla (a : int) : real {
+	write("\nAQUI\n");
+	write(a);
+	write("\nAQUI\n");
+	return a * 2.5;
+}
+
+main() {
+	x : int = 1;
+	y : int = 73;
+	z : real = 2.0;
+	write("\n");
+	write(x);
+	write("\n");
+	write(y);
+	write("\n\n\n");
+	z = bla(x);
+	write(z);
+	write('\n');
+	
+	return 10 + 50 * 2 - 5;
+}
