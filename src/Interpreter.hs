@@ -142,9 +142,12 @@ runWhileEvalResult _ _ state (BreakCall) = do return (state, Continue)
 --forces loop stop, But keeps running parent block
 
 runForEvalResult :: Expr -> Statement -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
-runForEvalResult expr incr body state Continue = (runForIncrementation expr incr body state) --increments and iterates
-runForEvalResult _ incr _ state (Return expr) = do return (state, Return expr) --returns from function
-runForEvalResult _ incr _ state (BreakCall) = do return (state, Continue) --forces loop stop, But keeps running parent block
+runForEvalResult expr incr body state Continue = (runForIncrementation expr incr body state) 
+--increments and iterates
+runForEvalResult _ incr _ state (Return expr) = do return (state, Return expr) 
+--returns from function
+runForEvalResult _ incr _ state (BreakCall) = do return (state, Continue) 
+--forces loop stop, But keeps running parent block
 
 runForIteration :: Expr -> Statement -> [Statement] -> OWLState -> IO (OWLState, StatementResult)
 runForIteration expr incr body state1 = do
@@ -241,11 +244,36 @@ runStatement (Assignment (AssignEl array index) assign) state1 = do
 	return (state1, Continue) -- TODO
 
 runStatement (Assignment (AssignField struct field) assign) state1 = do 
-	-- scopeID <- getScopeID struct state1
-	return (state1, Continue) -- TODO
+	let structVarName = getStructName (AssignField struct field)
+	scopeID <- getScopeID structVarName state1
+	(t1, v1, state2) <- evalExpr assign state1
+	(t2, v2) <- getVar (structVarName, scopeID) state2
+	if isUserType v2 then do
+		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
+		convertType t3 t1 
+		let newStruct = getInitValue t2 (getListUserTypes state2) -- TODO
+		return ((updateVar newStruct (structVarName, scopeID) state2), Continue)
+	else
+		fail "Struct field not found."
+	return (state1, Continue)
 
 runStatement (Assignment (AssignContent ptr) assign) state1 = do 
 	return (state1, Continue) -- TODO
+
+updateField :: VarValue -> VarValue -> AssignKey -> Declaration -> VarValue
+updateField fieldValue currentFieldValue (AssignField struct field) dec = nullVarValue -- AQUI!!!
+
+-- new field value, structVar, assign, decs 
+updateStruct :: VarValue -> VarValue -> AssignKey -> [Declaration] -> [VarValue]
+updateStruct fieldValue structVar assign [] = [] -- INCOMPLETO AQUI!!!
+updateStruct fieldValue (UserValue (s:structVar)) assign (d:decs) = do
+	updateField fieldValue s assign d : updateStruct fieldValue (UserValue (structVar)) assign (decs)
+
+getStructName :: AssignKey -> String
+getStructName (AssignVar name) = name
+getStructName (AssignEl assignKey expr) = getStructName assignKey
+getStructName (AssignField assignKey name) = getStructName assignKey
+getStructName (AssignContent assignKey) = getStructName assignKey
 
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do

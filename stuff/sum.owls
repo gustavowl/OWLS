@@ -1,0 +1,10 @@
+
+main() {
+	z3 : int = - 1 - 1 + 1;
+	
+	write("\n");
+	write(z3);
+	
+	write("\n");
+	return 10 + 50 * 2 - 5;
+}
