@@ -75,7 +75,7 @@ data VarType = AtomicType String
 	| ArrayType VarType
 	| PointerType VarType
 	| FuncType [VarType] VarType
-	| ProcType [VarType]
+	| ProcType [VarType] --TODO add UserType?
 	deriving (Eq,Show)
 
 data AssignKey = AssignVar String

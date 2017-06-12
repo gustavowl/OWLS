@@ -7,24 +7,35 @@ struct fracao {
 struct fracao1 {
 	a : fracao;
 	c : nat = 1;
+	b : fracao1;
 }
 
 
-x : fracao1;
+#x : fracao1;
 z : fracao;
 
 func soma(x : fracao1) : nat {
 	bla : fracao1;
-	bla.b = 0;	
+	bla.b.a.a = 0;	
 	return (x.a).b;
 }
 
 main () {
-	x.a.a = 2;
-	a : int;
-	b : nat;
-	b = soma(x);
+	#x.a.a = 2;
+	x : int = 10;
+	z.a = 2;
+	z.a = z.a + 5;
+	while (x < 20) {
+		x = x + 1;
+		write(x);
+		write('\n');
+	}
+	#b : nat;
+	#b = soma(x);
 	#write(a);
+	write("HELLO, WARUDO!\n");
+	write(z.a);
+	write('\n');
 	return 0;
 	#return (x.a / x.b);
 }
