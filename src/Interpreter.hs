@@ -248,13 +248,15 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 	print struct
 	print field
 	print assign
+	print "STATE1 BEGIN"
+	print state1
+	print "STATE1 END"
 	let structVarName = getStructName (AssignField struct field)
 	scopeID <- getScopeID structVarName state1
 	print "SCOPE"
 	--let var1 = getVar struct state1
 	--print var1
 	(t1, v1, state2) <- evalExpr assign state1
-	print state1
 	print state2
 	(t2, v2) <- getVar (structVarName, scopeID) state2
 	if isUserType v2 then do
@@ -280,10 +282,17 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 		let types = getListUserTypes state2
 		print types
 		print "GOT USER TYPES LIST"
-		let (d, e) = getUserType b types
-		print (d, e)
+		let (d, decs) = getUserType b types
+		print (d, decs)
 		print "GOT USERTYPE"
-		return ((updateVar newStruct (structVarName, scopeID) state2), Continue)
+
+		let newStruct2 = updateStruct v1 v2 (AssignVar field) decs
+		print newStruct2
+		print "THIS IS WHAT SHOULD BE PRINTED"
+		let state42 = (updateVar (UserValue newStruct2) (structVarName, scopeID) state2)
+		print state42
+		print "THIS WAS STATE42"
+		return ((updateVar (UserValue newStruct2) (structVarName, scopeID) state2), Continue)
 	else
 		fail "Struct field not found."
 	return (state1, Continue)
@@ -292,7 +301,14 @@ runStatement (Assignment (AssignContent ptr) assign) state1 = do
 	return (state1, Continue) -- TODO
 
 updateField :: VarValue -> VarValue -> AssignKey -> Declaration -> VarValue
-updateField fieldValue currentFieldValue (AssignField struct field) dec = nullVarValue -- AQUI!!!
+updateField fieldValue currentFieldValue (AssignVar field) dec = do
+	let name = getDecName dec --supposes type was previously verified 
+	if field == name then --changes value
+		fieldValue
+	else --keeps the same
+		currentFieldValue
+--updateField fieldValue currentFieldValue (AssignField struct field) dec = nullVarValue
+updateField fieldValue currentFieldValue _ dec = nullVarValue
 
 -- new field value, structVar, assign, decs 
 updateStruct :: VarValue -> VarValue -> AssignKey -> [Declaration] -> [VarValue]

@@ -24,6 +24,7 @@ main () {
 	#x.a.a = 2;
 	x : int = 10;
 	z.a = 2;
+	z.a = 3;
 	while (x < 20) {
 		x = x + 1;
 		write(x);
@@ -32,6 +33,7 @@ main () {
 	#b : nat;
 	#b = soma(x);
 	#write(a);
+	write("HELLO, WARUDO!\n");
 	write(z.a);
 	write('\n');
 	return 0;
