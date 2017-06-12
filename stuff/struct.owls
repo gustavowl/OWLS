@@ -24,7 +24,7 @@ main () {
 	#x.a.a = 2;
 	x : int = 10;
 	z.a = 2;
-	z.a = 3;
+	z.a = z.a + 5;
 	while (x < 20) {
 		x = x + 1;
 		write(x);

@@ -244,23 +244,23 @@ runStatement (Assignment (AssignEl array index) assign) state1 = do
 	return (state1, Continue) -- TODO
 
 runStatement (Assignment (AssignField struct field) assign) state1 = do
-	print "STRUCT"
+	{-print "STRUCT"
 	print struct
 	print field
-	print assign
-	print "STATE1 BEGIN"
+	print assign -}
+	print "STATE BEFORE ASSIGNMENT"
 	print state1
-	print "STATE1 END"
 	let structVarName = getStructName (AssignField struct field)
 	scopeID <- getScopeID structVarName state1
-	print "SCOPE"
+	--print "SCOPE"
 	--let var1 = getVar struct state1
 	--print var1
 	(t1, v1, state2) <- evalExpr assign state1
-	print state2
+	--print state2
 	(t2, v2) <- getVar (structVarName, scopeID) state2
 	if isUserType v2 then do
 		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
+		{-
 		print "OIE"
 		print t1
 		print v1
@@ -268,31 +268,33 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 		print v2
 		print t3
 		print v3
-		print "XAU"
+		print "XAU" -}
 		convertType t3 t1 
-		let newStruct = getInitValue t2 (getListUserTypes state2) -- TODO
-		
-		print newStruct
-		print structVarName
-		print scopeID
-		print "WATCH?"
-		(AtomicType b, c) <- getVar (structVarName, scopeID) state2
-		print (AtomicType b, c)
-		print "GOT VAR"
+		--print structVarName
+		--print scopeID
+		--print "WATCH?"
+		(AtomicType typename, _) <- getVar (structVarName, scopeID) state2
+		--print (AtomicType b, c)
+		--print "GOT VAR"
 		let types = getListUserTypes state2
-		print types
-		print "GOT USER TYPES LIST"
-		let (d, decs) = getUserType b types
-		print (d, decs)
-		print "GOT USERTYPE"
+		--print types
+		--print "GOT USER TYPES LIST"
+		let (_, decs) = getUserType typename types
+		--print decs
+		--print "GOT USERTYPE"
 
-		let newStruct2 = updateStruct v1 v2 (AssignVar field) decs
-		print newStruct2
+		let newStruct = updateStruct v1 v2 (AssignVar field) decs
+		{-
+		print newStruct
 		print "THIS IS WHAT SHOULD BE PRINTED"
-		let state42 = (updateVar (UserValue newStruct2) (structVarName, scopeID) state2)
+		let state42 = (updateVar (UserValue newStruct) (structVarName, scopeID) state2)
 		print state42
-		print "THIS WAS STATE42"
-		return ((updateVar (UserValue newStruct2) (structVarName, scopeID) state2), Continue)
+		print "THIS WAS STATE42" -}
+		let state3 = (updateVar (UserValue newStruct) (structVarName, scopeID) state2)
+		print "STATE AFTER ASSIGNMENT"
+		print state3
+		return (state3, Continue)
+		--return ((updateVar (UserValue newStruct) (structVarName, scopeID) state2), Continue)
 	else
 		fail "Struct field not found."
 	return (state1, Continue)
