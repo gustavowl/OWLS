@@ -174,9 +174,22 @@ initState types = (1, 0, [(0, -1, [])], types)
 getListUserTypes :: OWLState -> [UserType]
 getListUserTypes (_, _, _, userTypes) = userTypes
 
-getUserType :: String -> [UserType] -> UserType
-getUserType name1 ((name2, decs):types) = 
-	if name1 == name2 then (name2, decs) else getUserType name1 types
+-- Recebe a lista de todos os tipos de usuário atuais e retorna o tipo do usário com o nome dado
+getUserType :: String -> [UserType] -> IO UserType
+getUserType name [] = fail $ name ++ " is not a user type." 
+getUserType name1 ((name2, decs):types) = do
+	if name1 == name2 then 
+		return (name2, decs) 
+	else 
+		getUserType name1 types
+
+getUserTypeDecs :: String -> [UserType] -> [Declaration]
+getUserTypeDecs name [] = []
+getUserTypeDecs name1 ((name2, decs):types) =
+	if name1 == name2 then
+		decs 
+	else do
+		getUserTypeDecs name1 types
 
 initEachField :: [Declaration] -> [UserType] -> [VarValue]
 initEachField [] _ = []
@@ -194,6 +207,7 @@ getInitValue (AtomicType "real") _ = NumberValue 0
 getInitValue (AtomicType "char") _ = CharValue 'a'
 getInitValue (AtomicType "bool") _ = BoolValue False
 getInitValue (AtomicType name) types = do
-	let (_, decs) = (getUserType name types)
+	let decs = (getUserTypeDecs name types)
 	let vars = (initEachField decs types)
 	(UserValue vars)
+getInitValue (AtomicType "NULL") _ = nullVarValue
