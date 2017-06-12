@@ -189,31 +189,31 @@ parseAssignKey = do
 		f (Just a) = do
 			ptr <- (try parseAssignKey) <|> (parens parseAssignKey)
 			var <- parseAssignMods ptr
-			return var
+			return $ AssignContent var
 
 parseAssignMods :: AssignKey -> OWLParser AssignKey
 parseAssignMods key = do
-	optionMaybe ((try $ parseAssignField key) 
-		<|> (try $ parseAssignEl key)) >>= f where
-			f Nothing = return key
-			f (Just a) = do
-				mods <- parseAssignMods a
-				return mods
+	optionMaybe (try parseAssignEl) >>= f where
+		f Nothing = do
+			optionMaybe (try parseAssignField) >>= g where
+				g Nothing = return key
+				g (Just name) = do
+					mods <- parseAssignMods key
+					return $ AssignField mods name
+		f (Just i) = do
+			mods <- parseAssignMods key
+			return $ AssignEl mods i
 
-parseAssignEl :: AssignKey -> OWLParser AssignKey
-parseAssignEl key = do
+parseAssignEl :: OWLParser Expr
+parseAssignEl = do
 	expr <- brackets (parseExpr)
-	return $ AssignEl key expr
+	return expr
 
-parseAssignField :: AssignKey -> OWLParser AssignKey
-parseAssignField key = do
+parseAssignField :: OWLParser String
+parseAssignField = do
 	dotToken
 	name <- identifier
-	return $ AssignField key name 
-
-parseAssignContent :: AssignKey -> OWLParser AssignKey
-parseAssignContent key = do
-	return $ AssignContent key
+	return name 
 
 ---------------------------------------------------------------------------------------------------
 -- Control Flow

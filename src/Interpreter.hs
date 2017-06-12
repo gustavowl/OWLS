@@ -734,17 +734,18 @@ getModifiedValue exptectedType currentValue (AssignEl arrayKey indexExpr) (actua
 	convertType (AtomicType "nat") indexType
 	floatIndex <- getNumberValue indexValue
 	let i = round (floatIndex)
-	-- Types of the element
+	-- Type of the element
 	expectedElType <- getArrayType exptectedType
 	-- List of values
 	(size, currentArrayValue) <- getArrayValue currentValue
 
 	-- Check bounds.
 	if i >= size then
-		fail $ "Index out of bounds: " ++ show i
+		fail $ "Index out of bounds: " ++ show i ++ "/" ++ show size
 	else do
-		-- Get modified array element
+		-- Current element value.
 		let currentElValue = currentArrayValue !! (fromInteger i)
+		-- Get modified element value.
 		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
 		
 		-- Override in the list

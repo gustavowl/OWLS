@@ -6,7 +6,7 @@ main () {
 	write('\n');
 
 	b : [[int]] = array(array (-0, 5), 10);
-	b[3][6] = -10;
+	b[6][3] = -10;
 
 	write(b[6][3]);
 	write('\n');
