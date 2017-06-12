@@ -250,14 +250,15 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 	(t2, v2) <- getVar (structVarName, scopeID) state2
 	if isUserType v2 then do
 		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
-		convertType t3 t1 
+		convertType t3 t1 --TODO verificar em outro canto
 		(AtomicType typename, _) <- getVar (structVarName, scopeID) state2
 		let types = getListUserTypes state2
 		let (_, decs) = getUserType typename types
-		let newStruct = updateStruct v1 v2 (AssignVar field) decs
+		let newStruct = updateStruct v1 v2 (AssignField struct field) decs
 		return ((updateVar (UserValue newStruct) (structVarName, scopeID) state2), Continue)
 	else
-		fail "Struct field not found."
+		fail "Variable is not a struct"
+
 
 runStatement (Assignment (AssignContent ptr) assign) state1 = do 
 	return (state1, Continue) -- TODO
@@ -275,8 +276,16 @@ updateField fieldValue currentFieldValue _ dec = nullVarValue
 -- new field value, structVar, assign, decs 
 updateStruct :: VarValue -> VarValue -> AssignKey -> [Declaration] -> [VarValue]
 updateStruct fieldValue structVar assign [] = [] -- INCOMPLETO AQUI!!!
-updateStruct fieldValue (UserValue (s:structVar)) assign (d:decs) = do
-	updateField fieldValue s assign d : updateStruct fieldValue (UserValue (structVar)) assign (decs)
+updateStruct fieldValue (UserValue (s:structVar)) (AssignVar varName) (d:decs) = do
+	updateField fieldValue s (AssignVar varName) d : updateStruct fieldValue (UserValue (structVar)) (AssignVar varName) (decs)
+updateStruct fieldValue (UserValue (s:structVar)) (AssignEl key expr) (d:decs) = do
+	return nullVarValue --TODO glorioso
+updateStruct fieldValue (UserValue (s:structVar)) (AssignField (AssignVar varName) field) (d:decs) = do
+	updateStruct fieldValue (UserValue (s:structVar)) (AssignVar field) (d:decs)
+updateStruct fieldValue (UserValue (s:structVar)) (AssignField assign field) (d:decs) = do
+	return nullVarValue --TODO glorioso
+updateStruct fieldValue (UserValue (s:structVar)) (AssignContent key) (d:decs) = do
+	return nullVarValue --TODO poderoso, com Adam Sendler
 
 getStructName :: AssignKey -> String
 getStructName (AssignVar name) = name
