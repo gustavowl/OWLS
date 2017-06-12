@@ -11,7 +11,7 @@ struct fracao1 {
 }
 
 
-#x : fracao1;
+x : fracao1;
 z : fracao;
 
 func soma(x : fracao1) : nat {
@@ -21,15 +21,10 @@ func soma(x : fracao1) : nat {
 }
 
 main () {
-	#x.a.a = 2;
-	x : int = 10;
-	z.a = 2;
+	#x : int = 10;
+	z.a = 97;
 	z.a = z.a + 5;
-	while (x < 20) {
-		x = x + 1;
-		write(x);
-		write('\n');
-	}
+	x.a.a = 2;
 	#b : nat;
 	#b = soma(x);
 	#write(a);
