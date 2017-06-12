@@ -229,23 +229,17 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v 
 	return (state2, Continue)
 
-runStatement (Assignment (AssignVar name) assign) state1 = do 
-	scopeID <- getScopeID name state1
-	(expectedType, _) <- getVar (name, scopeID) state1
-	(actualType, value, state2) <- evalExpr assign state1
-	convertType expectedType actualType
-	let state3 = updateVar value (name, scopeID) state2
+runStatement (Assignment assignkey expr) state1 = do 
+	-- Valor do elemento/campo/variável.
+	(actualType, value, state2) <- evalExpr expr state1
+	-- Key da variável "raiz"
+	key <- getKeyToAssign assignkey state2
+	-- Tipo e valor atual da variável
+	(expectedType, currentValue) <- getVar key state2
+	-- Modificar o valor da variável.
+	value <- getModifiedValue expectedType currentValue assignkey (actualType, value, state2)
+	let state3 = updateVar value key state2
 	return (state3, Continue)
-
-runStatement (Assignment (AssignEl array index) assign) state1 = do 
-	return (state1, Continue) -- TODO
-
-runStatement (Assignment (AssignField struct field) assign) state1 = do 
-	-- scopeID <- getScopeID struct state1
-	return (state1, Continue) -- TODO
-
-runStatement (Assignment (AssignContent ptr) assign) state1 = do 
-	return (state1, Continue) -- TODO
 
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do
@@ -398,12 +392,13 @@ evalExpr (ReadRealCall) state = do
 	return (AtomicType "real", expr, state) -- ADD ArrayValue
 
 -- Array call.
-evalExpr (ArrayCall exprs) state = do
-	-- TODO: criar array multidimensional
-	-- exprs[0] -> elemento inicial da array
-	-- exprs[1..n] -> tamanho de cada dimensão da array (n=1 se for array comum)
-	-- inferir o tipo da array de acordo com o elemento inicial
-	return (nullVarType, nullVarValue, state)
+evalExpr (ArrayCall exprs) state1 = do
+	if (exprs == []) then
+		fail "Array call need an initial value."
+	else do
+		let (h:d) = exprs
+		(typ, initValue, state2) <- evalExpr h state1
+		evalArray typ initValue d state2 >>= return
 
 -- Sizeof call.
 evalExpr (SizeofCall expr) state1 = do
@@ -627,7 +622,7 @@ evalExpr (NumMod expr1 expr2) state1 = do
 
 ---------------------------------------------------------------------------------------------------
 -- Auxiliary
---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 convertArrayCharToExpr :: [Char] -> [VarValue]
 convertArrayCharToExpr [] = []  
@@ -639,7 +634,6 @@ convertArrayCharToExpr (x:xs) = (CharValue x) : convertArrayCharToExpr xs
 		--printValueArray t (l - 1) e1
 	--else
 		--putStr "" 
-
 
 createUntypedArrayValue :: [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
 createUntypedArrayValue [] state = do fail "Cannot create empty array."
@@ -656,3 +650,65 @@ createArrayValues (h:t) typ1 state1 = do
 	convertType typ1 typ2
 	(exprs, state3) <- createArrayValues t typ1 state2
 	return (expr:exprs, state3)
+
+evalArray :: VarType -> VarValue -> [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
+evalArray initTyp initVal [] state = do return (initTyp, initVal, state)
+evalArray initTyp initVal (d:dims) state1 = do
+	(typ, val, state2) <- evalExpr d state1
+	convertType (AtomicType "nat") typ
+	size <- getNumberValue val
+	let array = createArray (round size) initVal
+	evalArray (ArrayType initTyp) (ArrayValue (round size) array) dims state2 >>= return
+
+createArray :: Integer -> VarValue -> [VarValue]
+createArray size value = if size == 0 then [] else value:(createArray (size - 1) value)
+
+---------------------------------------------------------------------------------------------------
+-- Assignments
+---------------------------------------------------------------------------------------------------
+
+getKeyToAssign :: AssignKey -> OWLState -> IO Key
+getKeyToAssign (AssignVar name) state = do
+	scopeID <- getScopeID name state
+	return (name, scopeID)
+getKeyToAssign (AssignEl arrayKey index) state = getKeyToAssign arrayKey state
+getKeyToAssign (AssignField structKey field) state = getKeyToAssign structKey state
+
+getModifiedValue :: VarType -> VarValue -> AssignKey -> (VarType, VarValue, OWLState) -> IO VarValue
+getModifiedValue expectedType currentValue (AssignVar name) (actualType, value, state1) = do 
+	convertType expectedType actualType
+	return value
+
+getModifiedValue exptectedType currentValue (AssignEl arrayKey indexExpr) (actualType, value, state1) = do 
+	-- Calculate index.
+	(indexType, indexValue, state2) <- evalExpr indexExpr state1
+	convertType (AtomicType "nat") indexType
+	floatIndex <- getNumberValue indexValue
+	let i = round (floatIndex)
+	-- Types of the element
+	expectedElType <- getArrayType exptectedType
+	-- List of values
+	(size, currentArrayValue) <- getArrayValue currentValue
+
+	-- Check bounds.
+	if i >= size then
+		fail $ "Index out of bounds: " ++ show i
+	else do
+		-- Get modified array element
+		let currentElValue = currentArrayValue !! (fromInteger i)
+		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
+		
+		-- Override in the list
+		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
+		return (ArrayValue size newArrayValue)
+
+assignToKey (AssignField structKey field) (actualType, value, state1) = do 
+	-- scopeID <- getScopeID struct state1
+	return value -- TODO
+
+assignToKey (AssignContent ptr) (actualType, value, state1) = do 
+	return value -- TODO
+
+overrideArrayValue :: Integer -> VarValue -> [VarValue] -> [VarValue]
+overrideArrayValue i v [] = []
+overrideArrayValue i v (h:t) = if i == 0 then (v:t) else h:(overrideArrayValue (i - 1) v t)

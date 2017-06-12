@@ -1,0 +1,15 @@
+main () {
+	a : [int] = array(-0, 10);
+	a[2] = 2;
+
+	write(a[2]);
+	write('\n');
+
+	b : [[int]] = array(array (-0, 5), 10);
+	b[3][6] = -10;
+
+	write(b[6][3]);
+	write('\n');
+
+	return 0;
+}

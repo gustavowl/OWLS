@@ -11,7 +11,7 @@ main() {
 	write ("Digite um numero inteiro: \n");
 	c = readInt();
 
-	write((a*a - b) + c);
+	write(a*a - b + c);
 	write("\n");
 	return 0;
 }
