@@ -243,15 +243,46 @@ runStatement (Assignment (AssignVar name) assign) state1 = do
 runStatement (Assignment (AssignEl array index) assign) state1 = do 
 	return (state1, Continue) -- TODO
 
-runStatement (Assignment (AssignField struct field) assign) state1 = do 
+runStatement (Assignment (AssignField struct field) assign) state1 = do
+	print "STRUCT"
+	print struct
+	print field
+	print assign
 	let structVarName = getStructName (AssignField struct field)
 	scopeID <- getScopeID structVarName state1
+	print "SCOPE"
+	--let var1 = getVar struct state1
+	--print var1
 	(t1, v1, state2) <- evalExpr assign state1
+	print state1
+	print state2
 	(t2, v2) <- getVar (structVarName, scopeID) state2
 	if isUserType v2 then do
 		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
+		print "OIE"
+		print t1
+		print v1
+		print t2
+		print v2
+		print t3
+		print v3
+		print "XAU"
 		convertType t3 t1 
 		let newStruct = getInitValue t2 (getListUserTypes state2) -- TODO
+		
+		print newStruct
+		print structVarName
+		print scopeID
+		print "WATCH?"
+		(AtomicType b, c) <- getVar (structVarName, scopeID) state2
+		print (AtomicType b, c)
+		print "GOT VAR"
+		let types = getListUserTypes state2
+		print types
+		print "GOT USER TYPES LIST"
+		let (d, e) = getUserType b types
+		print (d, e)
+		print "GOT USERTYPE"
 		return ((updateVar newStruct (structVarName, scopeID) state2), Continue)
 	else
 		fail "Struct field not found."
