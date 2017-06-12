@@ -22,9 +22,9 @@ func soma(x : fracao1) : nat {
 
 main () {
 	#x : int = 10;
-	z.a = 97;
-	z.a = z.a + 5;
-	x.a.a = 2;
+	#z.a = 97;
+	#z.a = z.a + 5;
+	x.a.b = 2;
 	#b : nat;
 	#b = soma(x);
 	#write(a);

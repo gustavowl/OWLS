@@ -232,14 +232,19 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v 
 	return (state2, Continue)
 
-runStatement (Assignment (AssignVar name) assign) state1 = do 
-	scopeID <- getScopeID name state1
-	(expectedType, _) <- getVar (name, scopeID) state1
-	(actualType, value, state2) <- evalExpr assign state1
-	convertType expectedType actualType
-	let state3 = updateVar value (name, scopeID) state2
+runStatement (Assignment assignkey expr) state1 = do 
+	-- Valor do elemento/campo/variável.
+	(actualType, value, state2) <- evalExpr expr state1
+	-- Key da variável "raiz"
+	key <- getKeyToAssign assignkey state2
+	-- Tipo e valor atual da variável
+	(expectedType, currentValue) <- getVar key state2
+	-- Modificar o valor da variável.
+	value <- getModifiedValue expectedType currentValue assignkey (actualType, value, state2)
+	let state3 = updateVar value key state2
 	return (state3, Continue)
 
+{-
 runStatement (Assignment (AssignEl array index) assign) state1 = do 
 	return (state1, Continue) -- TODO
 
@@ -250,15 +255,14 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 	(t2, v2) <- getVar (structVarName, scopeID) state2
 	if isUserType v2 then do
 		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
-		convertType t3 t1 --TODO verificar em outro canto
+		convertType t3 t1 
 		(AtomicType typename, _) <- getVar (structVarName, scopeID) state2
 		let types = getListUserTypes state2
 		let (_, decs) = getUserType typename types
-		let newStruct = updateStruct v1 v2 (AssignField struct field) decs
+		let newStruct = updateStruct v1 v2 (AssignVar field) decs
 		return ((updateVar (UserValue newStruct) (structVarName, scopeID) state2), Continue)
 	else
-		fail "Variable is not a struct"
-
+		fail "Struct field not found."
 
 runStatement (Assignment (AssignContent ptr) assign) state1 = do 
 	return (state1, Continue) -- TODO
@@ -276,23 +280,10 @@ updateField fieldValue currentFieldValue _ dec = nullVarValue
 -- new field value, structVar, assign, decs 
 updateStruct :: VarValue -> VarValue -> AssignKey -> [Declaration] -> [VarValue]
 updateStruct fieldValue structVar assign [] = [] -- INCOMPLETO AQUI!!!
-updateStruct fieldValue (UserValue (s:structVar)) (AssignVar varName) (d:decs) = do
-	updateField fieldValue s (AssignVar varName) d : updateStruct fieldValue (UserValue (structVar)) (AssignVar varName) (decs)
-updateStruct fieldValue (UserValue (s:structVar)) (AssignEl key expr) (d:decs) = do
-	return nullVarValue --TODO glorioso
-updateStruct fieldValue (UserValue (s:structVar)) (AssignField (AssignVar varName) field) (d:decs) = do
-	updateStruct fieldValue (UserValue (s:structVar)) (AssignVar field) (d:decs)
-updateStruct fieldValue (UserValue (s:structVar)) (AssignField assign field) (d:decs) = do
-	return nullVarValue --TODO glorioso
-updateStruct fieldValue (UserValue (s:structVar)) (AssignContent key) (d:decs) = do
-	return nullVarValue --TODO poderoso, com Adam Sendler
+updateStruct fieldValue (UserValue (s:structVar)) assign (d:decs) = do
+	updateField fieldValue s assign d : updateStruct fieldValue (UserValue (structVar)) assign (decs)
 
-getStructName :: AssignKey -> String
-getStructName (AssignVar name) = name
-getStructName (AssignEl assignKey expr) = getStructName assignKey
-getStructName (AssignField assignKey name) = getStructName assignKey
-getStructName (AssignContent assignKey) = getStructName assignKey
-
+-}
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do
 	putStr (show b)
@@ -444,12 +435,13 @@ evalExpr (ReadRealCall) state = do
 	return (AtomicType "real", expr, state) -- ADD ArrayValue
 
 -- Array call.
-evalExpr (ArrayCall exprs) state = do
-	-- TODO: criar array multidimensional
-	-- exprs[0] -> elemento inicial da array
-	-- exprs[1..n] -> tamanho de cada dimensão da array (n=1 se for array comum)
-	-- inferir o tipo da array de acordo com o elemento inicial
-	return (nullVarType, nullVarValue, state)
+evalExpr (ArrayCall exprs) state1 = do
+	if (exprs == []) then
+		fail "Array call need an initial value."
+	else do
+		let (h:d) = exprs
+		(typ, initValue, state2) <- evalExpr h state1
+		evalArray typ initValue d state2 >>= return
 
 -- Sizeof call.
 evalExpr (SizeofCall expr) state1 = do
@@ -673,7 +665,7 @@ evalExpr (NumMod expr1 expr2) state1 = do
 
 ---------------------------------------------------------------------------------------------------
 -- Auxiliary
---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 convertArrayCharToExpr :: [Char] -> [VarValue]
 convertArrayCharToExpr [] = []  
@@ -685,7 +677,6 @@ convertArrayCharToExpr (x:xs) = (CharValue x) : convertArrayCharToExpr xs
 		--printValueArray t (l - 1) e1
 	--else
 		--putStr "" 
-
 
 createUntypedArrayValue :: [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
 createUntypedArrayValue [] state = do fail "Cannot create empty array."
@@ -737,44 +728,68 @@ getModifiedValue exptectedType currentValue (AssignEl arrayKey indexExpr) (actua
 	convertType (AtomicType "nat") indexType
 	floatIndex <- getNumberValue indexValue
 	let i = round (floatIndex)
-	-- Types of the element
+	-- Type of the element
 	expectedElType <- getArrayType exptectedType
 	-- List of values
 	(size, currentArrayValue) <- getArrayValue currentValue
 
 	-- Check bounds.
 	if i >= size then
-		fail $ "Index out of bounds: " ++ show i
+		fail $ "Index out of bounds: " ++ show i ++ "/" ++ show size
 	else do
-		-- Get modified array element
+		-- Current element value.
 		let currentElValue = currentArrayValue !! (fromInteger i)
+		-- Get modified element value.
 		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
 		
 		-- Override in the list
 		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
 		return (ArrayValue size newArrayValue)
 
-getModifiedValue userType currentValue (AssignField structKey field) (actualType, value, state1) = do 
-	
-	expectedElType <- getArrayType exptectedType
-	-- List of values
-	(size, currentArrayValue) <- getArrayValue currentValue
+getModifiedValue userType currentValue (AssignField struct field) (actualType, value, state1) = do 
+	{-}
+	print "ENTROU"
+	print userType
+	--print currentValue
+	print struct
+	print field
+	print (actualType, value) -}
+	print "SAIU"
+	print struct
+	print field
+	let structVarName = getStructName (AssignField struct field)
+	scopeID <- getScopeID structVarName state1
+	(AtomicType typename, _) <- getVar (structVarName, scopeID) state1
+	let listTypes = getListUserTypes state1
+	let (_, decs) = getUserType typename listTypes
 
-	-- Check bounds.
-	if i >= size then
-		fail $ "Index out of bounds: " ++ show i
-	else do
-		-- Get modified array element
-		let currentElValue = currentArrayValue !! (fromInteger i)
-		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
-		
-		-- Override in the list
-		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
-		return (ArrayValue size newArrayValue)	
+	print decs
+	print "WHAT?"
+	return nullVarValue
+{-
+	let structVarName = getStructName (AssignField struct field)
+	scopeID <- getScopeID structVarName state1
+	(t1, v1, state2) <- evalExpr assign state1
+	(t2, v2) <- getVar (structVarName, scopeID) state2
+	if isUserType v2 then do
+		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
+		convertType t3 t1 
+		(AtomicType typename, _) <- getVar (structVarName, scopeID) state2
+		let types = getListUserTypes state2-}
 
-getModifiedValue  exptectedType currentValue (AssignContent ptr) (actualType, value, state1) = do 
+assignToKey (AssignField structKey field) (actualType, value, state1) = do 
+	-- scopeID <- getScopeID struct state1
+	return value -- TODO
+
+assignToKey (AssignContent ptr) (actualType, value, state1) = do 
 	return value -- TODO
 
 overrideArrayValue :: Integer -> VarValue -> [VarValue] -> [VarValue]
 overrideArrayValue i v [] = []
 overrideArrayValue i v (h:t) = if i == 0 then (v:t) else h:(overrideArrayValue (i - 1) v t)
+
+getStructName :: AssignKey -> String
+getStructName (AssignVar name) = name
+getStructName (AssignEl assignKey expr) = getStructName assignKey
+getStructName (AssignField assignKey name) = getStructName assignKey
+getStructName (AssignContent assignKey) = getStructName assignKey
