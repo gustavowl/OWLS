@@ -297,7 +297,7 @@ runStatement (Assignment (AssignField struct field) assign) state1 = do
 		--return ((updateVar (UserValue newStruct) (structVarName, scopeID) state2), Continue)
 	else
 		fail "Struct field not found."
-	return (state1, Continue)
+	--return (state1, Continue)
 
 runStatement (Assignment (AssignContent ptr) assign) state1 = do 
 	return (state1, Continue) -- TODO
