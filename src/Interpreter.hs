@@ -702,3 +702,79 @@ createArrayValues (h:t) typ1 state1 = do
 	convertType typ1 typ2
 	(exprs, state3) <- createArrayValues t typ1 state2
 	return (expr:exprs, state3)
+
+evalArray :: VarType -> VarValue -> [Expr] -> OWLState -> IO (VarType, VarValue, OWLState)
+evalArray initTyp initVal [] state = do return (initTyp, initVal, state)
+evalArray initTyp initVal (d:dims) state1 = do
+	(typ, val, state2) <- evalExpr d state1
+	convertType (AtomicType "nat") typ
+	size <- getNumberValue val
+	let array = createArray (round size) initVal
+	evalArray (ArrayType initTyp) (ArrayValue (round size) array) dims state2 >>= return
+
+createArray :: Integer -> VarValue -> [VarValue]
+createArray size value = if size == 0 then [] else value:(createArray (size - 1) value)
+
+---------------------------------------------------------------------------------------------------
+-- Assignments
+---------------------------------------------------------------------------------------------------
+
+getKeyToAssign :: AssignKey -> OWLState -> IO Key
+getKeyToAssign (AssignVar name) state = do
+	scopeID <- getScopeID name state
+	return (name, scopeID)
+getKeyToAssign (AssignEl arrayKey index) state = getKeyToAssign arrayKey state
+getKeyToAssign (AssignField structKey field) state = getKeyToAssign structKey state
+
+getModifiedValue :: VarType -> VarValue -> AssignKey -> (VarType, VarValue, OWLState) -> IO VarValue
+getModifiedValue expectedType currentValue (AssignVar name) (actualType, value, state1) = do 
+	convertType expectedType actualType
+	return value
+
+getModifiedValue exptectedType currentValue (AssignEl arrayKey indexExpr) (actualType, value, state1) = do 
+	-- Calculate index.
+	(indexType, indexValue, state2) <- evalExpr indexExpr state1
+	convertType (AtomicType "nat") indexType
+	floatIndex <- getNumberValue indexValue
+	let i = round (floatIndex)
+	-- Types of the element
+	expectedElType <- getArrayType exptectedType
+	-- List of values
+	(size, currentArrayValue) <- getArrayValue currentValue
+
+	-- Check bounds.
+	if i >= size then
+		fail $ "Index out of bounds: " ++ show i
+	else do
+		-- Get modified array element
+		let currentElValue = currentArrayValue !! (fromInteger i)
+		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
+		
+		-- Override in the list
+		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
+		return (ArrayValue size newArrayValue)
+
+getModifiedValue userType currentValue (AssignField structKey field) (actualType, value, state1) = do 
+	
+	expectedElType <- getArrayType exptectedType
+	-- List of values
+	(size, currentArrayValue) <- getArrayValue currentValue
+
+	-- Check bounds.
+	if i >= size then
+		fail $ "Index out of bounds: " ++ show i
+	else do
+		-- Get modified array element
+		let currentElValue = currentArrayValue !! (fromInteger i)
+		newElValue <- getModifiedValue expectedElType currentElValue arrayKey (actualType, value, state2)
+		
+		-- Override in the list
+		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
+		return (ArrayValue size newArrayValue)	
+
+getModifiedValue  exptectedType currentValue (AssignContent ptr) (actualType, value, state1) = do 
+	return value -- TODO
+
+overrideArrayValue :: Integer -> VarValue -> [VarValue] -> [VarValue]
+overrideArrayValue i v [] = []
+overrideArrayValue i v (h:t) = if i == 0 then (v:t) else h:(overrideArrayValue (i - 1) v t)
