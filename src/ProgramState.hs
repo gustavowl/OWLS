@@ -201,8 +201,35 @@ extractParamTypes (h:params) = (extractParamType h) : (extractParamTypes params)
 ---------------------------------------------------------------------------------------------------
 
 -- Apenas o escopo global, vazio.
-initState :: [UserType] -> OWLState
-initState types = (1, 0, [(0, -1, [])], types)
+initState :: [UserType] -> IO OWLState
+initState types = do 
+	verifyTypes types
+	return (1, 0, [(0, -1, [])], types)
+
+verifyType :: UserType -> [UserType] -> IO Bool
+verifyType _ [] = do return True
+verifyType (name1, decs) ((name2,_):userTypes) = do
+	if name1 == name2 then fail "UserType declaration invalid." else verifyType (name1, decs) userTypes
+
+verifyDecType :: Declaration -> [Declaration] -> IO Bool
+verifyDecType _ [] = do return True
+verifyDecType dec (d:decs) = do
+	let name1 = getDecName dec
+	let name2 = getDecName d
+	if name1 == name2 then fail "UserType declaration invalid." else verifyDecType dec decs
+
+verifyTypeDecs :: UserType -> IO Bool
+verifyTypeDecs (_,[]) = do return True
+verifyTypeDecs (name, (d:decs)) = do 
+	v <- verifyDecType d decs 
+	if v then verifyTypeDecs (name, decs) else do return False
+
+verifyTypes :: [UserType] -> IO Bool 
+verifyTypes [] = do return True
+verifyTypes (u:userTypes) = do
+	v <- verifyType u userTypes
+	verifyTypeDecs u  
+	if v then verifyTypes userTypes else do return False
 
 getListUserTypes :: OWLState -> [UserType]
 getListUserTypes (_, _, _, userTypes) = userTypes

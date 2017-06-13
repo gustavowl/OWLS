@@ -9,7 +9,8 @@ import Data.List
 
 runProgram :: Program -> IO()
 runProgram (types, decs, main) = do
-	state <- addGlobalDecs decs (initState types)
+	initialState <- initState types
+	state <- addGlobalDecs decs initialState
 	i <- callMain getMainArgs main state
 	print i
 
