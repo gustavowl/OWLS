@@ -1,7 +1,8 @@
 
 struct fracao1 {
 	c : int;
-	b : nat;
+	a : nat;
+	a : nat;
 }
 
 struct fracao2 {

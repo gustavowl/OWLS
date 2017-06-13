@@ -82,16 +82,22 @@ isInScope name nullVarType tableEntry =
 	verifyScopeNameRec name nullVarType tableEntry
 isInScope name (FuncType a b) ((varName, (FuncType c d), e):t) =
 	verifyScopeNameRec name (FuncType a b) ((varName, (FuncType c d), e):t)
+
 isInScope name (FuncType a b) ((varName, _, _):t) = 
 	isInScope name (FuncType a b) t
+
 isInScope name (ProcType a) ((varName, (ProcType b), c):t) = 
 	verifyScopeNameRec name (ProcType a) ((varName, (ProcType b), c):t)
+
 isInScope name (ProcType a) ((varName, _, _):t) = 
 	isInScope name (ProcType a) t
+
 isInScope name varType ((varName, (FuncType _ _), _):t) = 
 	isInScope name varType t
+
 isInScope name varType ((varName, (ProcType _), _):t) = 
 	isInScope name varType t
+
 isInScope name varType ((varName, a, b):t) = 
 	--verifies arrays, pointers and variables (Atomic)
 	verifyScopeNameRec name varType ((varName, a, b):t)
@@ -102,6 +108,9 @@ verifyScopeNameRec name varType ((varName, _, _):t) =
 		True
 	else
 		isInScope name varType t
+
+getCurrentScopeID :: OWLState -> Integer
+getCurrentScopeID (c1, c2, (current, _, _):t, types) = current
 
 popScope :: OWLState -> OWLState
 popScope (c1, c2, h:t, types) = (c1, c2, t, types)

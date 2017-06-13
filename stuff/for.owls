@@ -1,24 +1,13 @@
 main() {
 	x : int = 12;
 	for (i : int = 0; i < 10; i = i + 1) {
-		x = x + i;
-		if (x > 40) {
-			break;
+		for (j : int = 0; j < 2; j = j + 1) {
+			write('\n');
+			for (j : int = 0; j < 2; j = j + 1) {
+				write(j);
+			}
 		}
-		write(x);
-		write('\n');
 	}
-	x = 10;
-	while (x < 20) {
-		x = x + 1;
-		write(x);
-		write('\n');
-	}
-	if (x == 20) {
-		write("aidento\n");
-	}
-	else {
-		write("aifora\n");
-	}
+	write('\n');
 	return 93;
 }

@@ -161,7 +161,8 @@ runForIteration expr incr body state1 = do
 		--evaluates result to decide wheter should stop or continue iterating
 		runForEvalResult expr incr body state3 result
 	else do
-		return (state2, Continue) --else just do nothing. will stop running
+		let state3 = popScope state2
+		return (state3, Continue) --else just do nothing. will stop running
 
 --executes incrementation of for loop
 runForIncrementation :: Expr -> Statement -> [Statement] -> OWLState -> IO(OWLState, StatementResult)
@@ -209,12 +210,15 @@ runStatement (While expr body) state1 = do
 
 --these will only be executed once
 runStatement (For (Var id varType initVal) expr incr body) state1 = do
-	(state2, _) <- runStatement (VarDec (Var id varType initVal)) state1
-	runForIteration expr incr body state2
+	let state2 = newScope (getCurrentScopeID state1) state1
+	(state3, _) <- runStatement (VarDec (Var id varType initVal)) state2
+	runForIteration expr incr body state3
 runStatement (For (Function name params ret body1) expr incr body2) state1 = do
+	--let state2 = newScope parentID state1
 	(state2, _) <- runStatement (FuncDec (Function name params ret body1)) state1
 	return (state2, Continue)
 runStatement (For (Procedure name params body1) expr incr body2) state1 = do
+	--let state2 = newScope parentID state1
 	(state2, _) <- runStatement (ProcDec (Procedure name params body1)) state1
 	return (state2, Continue)
 
