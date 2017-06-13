@@ -4,20 +4,15 @@ func emptymatrix(row : nat, col : nat) : [[real]] {
 
 func readmatrix(row : nat, col : nat) : [[real]] {
 	m : [[real]] = emptymatrix(row, col);
-	j : nat;
-	i : nat = 0;
-	while(i < row) {
-		j = 0;
-		while (j < col) {
+	for(i : nat = 0; i < row; i = i + 1) {
+		for (j : nat = 0; j < col; j = j + 1) {
 			write ("Insira a célula (");
 			write (i);
 			write (",");
 			write (j);
 			write ("):\n");
 			m[i][j] = readReal();
-			j = j + 1;
 		}
-		i = i + 1;
 	}
 	return m;
 }
@@ -51,26 +46,18 @@ main() {
 	B : [[real]] = readmatrix(rowB, colB);	
 
 	M : [[real]] = emptymatrix(rowA, colB);
-	j : nat;
-	k : nat;
-	i : nat = 0;
-
+	
 	if(colA == rowB){
 		write("O resultado da multiplicação é:\n");
-		while( i < rowA) {
-			j = 0;	
-			while(j < colB) {
-				k = 0;
-				while (k < rowB) {
+		for(i : nat = 0; i < rowA; i = i + 1) {
+			for(j : nat = 0;j < colB; j = j + 1) {
+				for (k : nat = 0;k < rowB; k = k + 1) {
 					M[i][j] = M[i][j] + A[i][k] * B[k][j];
-					k = k + 1;
 				}
 				write(M[i][j]);
 				write(' ');
-				j = j + 1;
 			}
 			write('\n');
-			i = i + 1;
 		}
 	} 
 	else {
@@ -82,17 +69,13 @@ main() {
 		write("O resultado da soma é:\n");
 
 		M  = emptymatrix(rowA, colA);
-		i  = 0;
-		while( i < rowA) {
-			j = 0;	
-			while(j < colA) {
+		for(i : nat = 0; i < rowA; i = i + 1) {	
+			for(j : nat = 0;j < colA; j = j + 1) {
 				M[i][j] = A[i][j] + B[i][j];
 				write(M[i][j]);
 				write(' ');
-				j = j + 1;
 			}
 				write('\n');
-				i = i + 1;
 			}
 	}
 	else {
