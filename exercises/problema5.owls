@@ -1,20 +1,20 @@
-func mdc (m : int, n : int) : int {
-	if(m % n == 0) {
-		return n;
-	}
-	else {
-		if(n % m == 0){
-			return m;
-		}
-		else {
-			if(m > n){
-				return mdc(n, m%n);
-			}
-			else{
-				return mdc(m, n%m);
-			}
-		}
-	}	
+proc mdc (m : int, n : int, r : @int) {
+	#if(m % n == 0) {
+		@r = n;
+	#}
+	#else {
+#		if(n % m == 0){
+#			return m;
+#		}
+#		else {
+#			if(m > n){
+#				@r = mdc(n, m%n);
+#			}
+#			else{
+#				@r = mdc(m, n%m);
+#			}
+#		}
+#	}	
 }
 
 main() {
@@ -26,7 +26,7 @@ main() {
 	m = readInt();
 	n = readInt();
 
-	r = mdc(m,n);
+	mdc(m,n, $r);
 	write ("O mdc de ");
 	write (m);
 	write (" e ");
