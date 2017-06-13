@@ -1,6 +1,6 @@
 
 struct fracao1 {
-	c : int = 1;
+	c : int;
 	b : nat;
 }
 
