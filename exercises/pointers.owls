@@ -3,5 +3,13 @@ main() {
 	ptr : @int = $x;
 	write(@ptr);
 	write('\n');
+	x = 15;
+	write(@ptr);
+	write('\n');
+	@ptr = 50;
+	write(@ptr);
+	write('\n');
+	write(x);
+	write('\n');
 	return 0;
 }

@@ -83,7 +83,7 @@ data VarType = AtomicType String
 data AssignKey = AssignVar String
 	| AssignEl AssignKey Expr
 	| AssignField AssignKey String
-	| AssignContent AssignKey
+	| AssignContent Expr
 	deriving (Eq,Show)
 
 ---------------------------------------------------------------------------------------------------

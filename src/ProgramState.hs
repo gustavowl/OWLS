@@ -206,8 +206,8 @@ getInitValue (AtomicType "int") _ = NumberValue 0
 getInitValue (AtomicType "real") _ = NumberValue 0
 getInitValue (AtomicType "char") _ = CharValue 'a'
 getInitValue (AtomicType "bool") _ = BoolValue False
+getInitValue (AtomicType "NULL") _ = nullVarValue
 getInitValue (AtomicType name) types = do
 	let decs = (getUserTypeDecs name types)
 	let vars = (initEachField decs types)
 	(UserValue vars)
-getInitValue (AtomicType "NULL") _ = nullVarValue

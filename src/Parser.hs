@@ -180,16 +180,19 @@ parseAssignment = do
 	return $ Assignment key expr
 
 parseAssignKey :: OWLParser AssignKey
-parseAssignKey = do
-	optionMaybe (atToken) >>= f where
-		f Nothing = do
-			id <- identifier
-			var <- parseAssignMods $ AssignVar id
-			return var
-		f (Just a) = do
-			ptr <- (try parseAssignKey) <|> (parens parseAssignKey)
-			var <- parseAssignMods ptr
-			return $ AssignContent var
+parseAssignKey = parseAssignVar <|> parseAssignContent 
+
+parseAssignContent :: OWLParser AssignKey
+parseAssignContent = do
+	atToken
+	ptr <- (try parseExpr) <|> (parens parseExpr)
+	return $ AssignContent ptr
+
+parseAssignVar :: OWLParser AssignKey 
+parseAssignVar = do
+	id <- identifier
+	var <- parseAssignMods $ AssignVar id
+	return var
 
 parseAssignMods :: AssignKey -> OWLParser AssignKey
 parseAssignMods key = do

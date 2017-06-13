@@ -231,18 +231,18 @@ runStatement (WriteCall expr) state1 = do
 	printValue t v 
 	return (state2, Continue)
 
-runStatement (Assignment assignkey expr) state1 = do 
-	-- Valor do elemento/campo/variável.
-	(actualType, value, state2) <- evalExpr expr state1
-	-- Key da variável "raiz"
-	key <- getKeyToAssign assignkey state2
-	-- Tipo e valor atual da variável
-	(expectedType, currentValue) <- getVar key state2
-	-- Modificar o valor da variável.
-	value <- getModifiedValue expectedType currentValue assignkey (actualType, value, state2)
-	
-	let state3 = updateVar value key state2
+runStatement (Assignment (AssignContent ptr) expr) state1 = do 
+	(t, v, state2) <- evalExpr ptr state1
+	key <- getPointerValue v
+	state3 <- runAssignment key (AssignVar "") expr state1
 	return (state3, Continue)
+
+runStatement (Assignment assignkey expr) state1 = do 
+	-- Key da variável "raiz"
+	key <- getKeyToAssign assignkey state1
+	-- Tipo e valor atual da variável
+	state2 <- runAssignment key assignkey expr state1
+	return (state2, Continue)
 
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do
@@ -659,6 +659,17 @@ createArray size value = if size == 0 then [] else value:(createArray (size - 1)
 -- Assignments
 ---------------------------------------------------------------------------------------------------
 
+runAssignment :: Key -> AssignKey -> Expr -> OWLState -> IO OWLState
+runAssignment key assignkey expr state1 = do
+		-- Valor do elemento/campo/variável.
+	(actualType, value, state2) <- evalExpr expr state1
+	-- Tipo e valor atual da variável
+	(expectedType, currentValue) <- getVar key state2
+	-- Calcular novo valor da variável.
+	value <- getModifiedValue expectedType currentValue assignkey (actualType, value, state2)
+	-- Modificar o valor da variável.
+	return $ updateVar value key state2
+
 getKeyToAssign :: AssignKey -> OWLState -> IO Key
 getKeyToAssign (AssignVar name) state = do
 	scopeID <- getScopeID name state
@@ -667,7 +678,7 @@ getKeyToAssign (AssignEl arrayKey index) state = getKeyToAssign arrayKey state
 getKeyToAssign (AssignField structKey field) state = getKeyToAssign structKey state
 
 getModifiedValue :: VarType -> VarValue -> AssignKey -> (VarType, VarValue, OWLState) -> IO VarValue
-getModifiedValue expectedType currentValue (AssignVar name) (actualType, value, state1) = do 
+getModifiedValue expectedType currentValue (AssignVar _) (actualType, value, state1) = do 
 	convertType expectedType actualType
 	return value
 
@@ -718,9 +729,6 @@ getModifiedValue exptectedType currentValue (AssignField structKey fieldName) (a
 
 			let newStructValue = overrideArrayValue currentFieldID newFieldValue currentFields
 			return (UserValue newStructValue)
-
-getModifiedValue exptectedType currentValue (AssignContent ptr) (actualType, value, state1) = do 
-	return value -- TODO
 
 isAssignVar :: AssignKey -> Bool
 isAssignVar (AssignVar a) = True
