@@ -4,16 +4,21 @@ func emptymatrix(row : nat, col : nat) : [[real]] {
 
 func readmatrix(row : nat, col : nat) : [[real]] {
 	m : [[real]] = emptymatrix(row, col);
-	for(i : nat = 0; i < row; i = i + 1) {
-		r : [real] = array(0.0, row);
-		for (j : nat = 0; j < col; j = j + 1) {
+	j : nat;
+	i : nat = 0;
+	while(i < row) {
+		#r : [real] = array(0.0, row);
+		j = 0;
+		while (j < col) {
 			write ("Insira a célula (");
 			write (i);
 			write (",");
 			write (j);
 			write ("):\n");
-			m[i][j] = readNat();
+			m[i][j] = readReal();
+			j = j + 1;
 		}
+		i = i + 1;
 	}
 	return m;
 }
@@ -31,12 +36,12 @@ main() {
 	colB : nat = readNat();
 
 	if (colA <= 0 || colB <= 0 || rowA <= 0 || rowB <= 0) {
-		write ("Não é possível fazer a multiplicação com valores inválidos.\n");
+		write ("Não é possível fazer a multiplicação e adição de matrizes. Valores inválidos.\n");
 		return 0;
 	}
 
-	if (colA != rowB) {
-		write ("Não é possível fazer a multiplicação.\n");
+	if (colA != rowB && colA != colB && rowA != rowB) {
+		write ("Não é possível fazer a multiplicação e nem a adição.\n");
 		return 0;
 	}
 
@@ -44,20 +49,56 @@ main() {
 	A : [[real]] = readmatrix(rowA, colA);
 
 	write("Insira os elementos da matriz B:\n");
-	B : [[real]] = readmatrix(rowB, colB);
-
-	write("O resultado da multiplicação é:\n");
+	B : [[real]] = readmatrix(rowB, colB);	
 
 	M : [[real]] = emptymatrix(rowA, colB);
-	for(i : nat = 0; i < rowA; i = i + 1) {
-		for (j : nat = 0; j < colB; j = j + 1) {
-			for (k : nat = 0; k < rowB; k = k + 1) {
-				M[i][j] = M[i][j] + A[i][k] * B[k][j];
+	j : nat;
+	k : nat;
+	i : nat = 0;
+
+	if(colA == rowB){
+		write("O resultado da multiplicação é:\n");
+		while( i < rowA) {
+			j = 0;	
+			while(j < colB) {
+				k = 0;
+				while (k < rowB) {
+					M[i][j] = M[i][j] + A[i][k] * B[k][j];
+					k = k + 1;
+				}
+				write(M[i][j]);
+				write(' ');
+				j = j + 1;
 			}
-			write(M[i][j]);
-			write(' ');
+			write('\n');
+			i = i + 1;
 		}
-		write('\n');
+	} 
+	else {
+		write("Não foi possível realizar a multiplicação das matrizes.\n");
 	}
+	
+
+	if(colA == colB && rowA == rowB){
+		write("O resultado da soma é:\n");
+
+		M  = emptymatrix(rowA, colA);
+		i  = 0;
+		while( i < rowA) {
+			j = 0;	
+			while(j < colA) {
+				M[i][j] = A[i][j] + B[i][j];
+				write(M[i][j]);
+				write(' ');
+				j = j + 1;
+			}
+				write('\n');
+				i = i + 1;
+			}
+	}
+	else {
+		write("Não foi possível realizar a soma das matrizes.\n");
+	}
+
 	return 0;
 }
