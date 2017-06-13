@@ -32,6 +32,9 @@ nullVarType = AtomicType "NULL"
 nullVarValue :: VarValue
 nullVarValue = NumberValue 12345666
 
+nullOWLState :: OWLState
+nullOWLState = (-1, -1, [], [])
+
 ---------------------------------------------------------------------------------------------------
 -- Scope
 ---------------------------------------------------------------------------------------------------
@@ -48,20 +51,20 @@ getScope scopeID (_, _, stack, _) = f (popToScope scopeID stack) where
 
 getScopeID :: String -> OWLState -> IO Integer
 getScopeID name (_, _, stack, _) = do
-	let id = searchVarScope name stack
+	let id = searchVarScope name nullVarType stack --TODO change this
 	if id == -1 then do
 		--print stack
 		fail $ "Variable " ++ name ++ " not found."
 	else
 		return id
 		
-searchVarScope :: String -> [Scope] -> Integer
-searchVarScope name [] = -1
-searchVarScope name ((currentID, parentID, table):scopes) =
-	if isInScope name table then
+searchVarScope :: String -> VarType -> [Scope] -> Integer
+searchVarScope name _ [] = -1
+searchVarScope name varType ((currentID, parentID, table):scopes) =
+	if isInScope name varType table then
 		currentID
 	else
-		searchVarScope name (popToScope parentID scopes)
+		searchVarScope name varType (popToScope parentID scopes)
 
 popToScope :: Integer -> [Scope] -> [Scope]
 popToScope scopeID [] = []
@@ -71,13 +74,34 @@ popToScope scopeID ((currentID, parentID, table):scopes) =
 	else
 		popToScope scopeID scopes
 
-isInScope :: String -> [TableEntry] -> Bool
-isInScope name [] = False
-isInScope name ((varName, _, _):t) = 
-	if name == varName then 
-		True 
-	else 
-		isInScope name t
+isInScope :: String -> VarType -> [TableEntry] -> Bool
+isInScope name _ [] = False
+isInScope name nullVarType tableEntry =
+	--only verifies scope accordingly to name. It does not care about
+	--the type. Used by getScopeID
+	verifyScopeNameRec name nullVarType tableEntry
+isInScope name (FuncType a b) ((varName, (FuncType c d), e):t) =
+	verifyScopeNameRec name (FuncType a b) ((varName, (FuncType c d), e):t)
+isInScope name (FuncType a b) ((varName, _, _):t) = 
+	isInScope name (FuncType a b) t
+isInScope name (ProcType a) ((varName, (ProcType b), c):t) = 
+	verifyScopeNameRec name (ProcType a) ((varName, (ProcType b), c):t)
+isInScope name (ProcType a) ((varName, _, _):t) = 
+	isInScope name (ProcType a) t
+isInScope name varType ((varName, (FuncType _ _), _):t) = 
+	isInScope name varType t
+isInScope name varType ((varName, (ProcType _), _):t) = 
+	isInScope name varType t
+isInScope name varType ((varName, a, b):t) = 
+	--verifies arrays, pointers and variables (Atomic)
+	verifyScopeNameRec name varType ((varName, a, b):t)
+
+verifyScopeNameRec :: String -> VarType -> [TableEntry] -> Bool
+verifyScopeNameRec name varType ((varName, _, _):t) = 
+	if name == varName then
+		True
+	else
+		isInScope name varType t
 
 popScope :: OWLState -> OWLState
 popScope (c1, c2, h:t, types) = (c1, c2, t, types)
@@ -89,9 +113,12 @@ popScope a = a -- Should not happen.
 
 addVarDec :: String -> VarType -> OWLState -> OWLState
 addVarDec name varType (c1, c2, [], types) = (c1, c2, [], types)
-addVarDec name varType (c1, c2, (a, b, table):scopes, types) = let
-	newElement = (name, varType, (getInitValue varType types)) in
-	(c1, c2, (a, b, newElement:table):scopes, types)
+addVarDec name varType (c1, c2, (a, b, table):scopes, types) = do
+	if not(isInScope name varType table) then do
+		let	newElement = (name, varType, (getInitValue varType types))
+		(c1, c2, (a, b, newElement:table):scopes, types)
+	else
+		nullOWLState --caller should throw an error
 
 updateTableEntry :: VarValue -> String -> [TableEntry] -> [TableEntry] 
 updateTableEntry v name [] = []
@@ -131,14 +158,20 @@ getVarFromTable name ((name', t, v):table) = do
 		return var
 
 addFuncDec :: String -> [Declaration] -> VarType -> [Statement] -> OWLState -> OWLState
-addFuncDec name params ret body (c1, c2, [(a, b, table)], types) = let 
-	newFuncDec = (name, FuncType (extractParamTypes params) ret, FuncValue a params body) in
-	(c1, c2, [(a, b, newFuncDec:table)], types)
+addFuncDec name params ret body (c1, c2, [(a, b, table)], types) =
+	if not(isInScope name (FuncType [] nullVarType) table) then 
+		let newFuncDec = (name, FuncType (extractParamTypes params) ret, FuncValue a params body) in
+		(c1, c2, [(a, b, newFuncDec:table)], types)
+	else
+		nullOWLState
 
 addProcDec :: String -> [Declaration] -> [Statement] -> OWLState -> OWLState
-addProcDec name params body (c1, c2, [(a, b, table)], types) = let 
-	newProcDec = (name, ProcType (extractParamTypes params), ProcValue a params body) in
-	(c1, c2, [(a, b, newProcDec:table)], types)
+addProcDec name params body (c1, c2, [(a, b, table)], types) = 
+	if not(isInScope name (ProcType []) table) then
+		let newProcDec = (name, ProcType (extractParamTypes params), ProcValue a params body) in
+		(c1, c2, [(a, b, newProcDec:table)], types)
+	else
+		nullOWLState
 
 ---------------------------------------------------------------------------------------------------
 -- Declaration info

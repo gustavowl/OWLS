@@ -14,14 +14,30 @@ struct fracao {
 	z : fracao2;
 }
 
+proc p() {
+	write("\n\n\n\ntest");
+}
+
 x : fracao;
+y : real;
+#y : int = 73;
 
 main () {
+	y : int = 73;
+	write(y);
+	p();
+	write('\n');
 	x.c = 666;
 	x.z.a.c = 2;
 	write(x.z.a.c);
 	write('\n');
 	write(x.c);
+	write('\n');
+	x : int = 10;
+	write(x);
+	write('\n');
+	x : real = 12.0;
+	write(x);
 	write('\n');
 	#x : int = z.a.a;
 	return 0;

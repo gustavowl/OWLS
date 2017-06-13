@@ -274,21 +274,34 @@ printValueArray t l (e: e1) = do
 ---------------------------------------------------------------------------------------------------
 
 addDec :: Declaration -> OWLState -> IO OWLState
-addDec (Var name varType Nothing) state = do 
-	return $ addVarDec name varType state
-	
+addDec (Var name varType Nothing) state1 = do 
+	let state2 = addVarDec name varType state1
+	if nullOWLState == state2 then
+		fail $ "Duplicate var declaration: " ++ name
+	else
+		return state2
 addDec (Var name varType (Just e)) state1 = do 
 	(actualType, value, state2) <- evalExpr e state1
 	convertType varType actualType
 	let state3 = addVarDec name varType state2
-	--print state3
-	scopeID <- getScopeID name state3
-	return $ updateVar value (name, scopeID) state3
+	if nullOWLState == state3 then
+		fail $ "Duplicate var declaration: " ++ name
+	else do
+		scopeID <- getScopeID name state3
+		return $ updateVar value (name, scopeID) state3
 
-addDec (Function name params ret body) state = do
-	return $ addFuncDec name params ret body state
-addDec (Procedure name params body) state = do
-	return $ addProcDec name params body state
+addDec (Function name params ret body) state1 = do
+	let state2 = addFuncDec name params ret body state1
+	if nullOWLState == state2 then
+		fail $ "Duplicate function declaration: " ++ name
+	else
+		return state2
+addDec (Procedure name params body) state1 = do
+	let state2 = addProcDec name params body state1
+	if nullOWLState == state2 then
+		fail $ "Duplicate procedure declaration: " ++ name
+	else
+		return state2
 
 ---------------------------------------------------------------------------------------------------
 -- Evaluate Expression
