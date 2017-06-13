@@ -274,7 +274,9 @@ printValueArray t l (e: e1) = do
 ---------------------------------------------------------------------------------------------------
 
 addDec :: Declaration -> OWLState -> IO OWLState
-addDec (Var name varType Nothing) state = do return $ addVarDec name varType state
+addDec (Var name varType Nothing) state = do 
+	return $ addVarDec name varType state
+	
 addDec (Var name varType (Just e)) state1 = do 
 	(actualType, value, state2) <- evalExpr e state1
 	convertType varType actualType
@@ -720,15 +722,10 @@ getModifiedValue exptectedType currentValue (AssignField structKey fieldName) (a
 		currentFieldValue <- getField currentFieldID currentFields -- pega o campo na posição i na variável atual
 		currentFieldType <-  getFieldType currentFieldID fields
 
-		if isAssignVar structKey then do
-			convertType currentFieldType actualType
-			let newStructValue = overrideArrayValue currentFieldID value currentFields
-			return (UserValue newStructValue)
-		else do
-			newFieldValue <- getModifiedValue currentFieldType currentFieldValue structKey (actualType, value, state1)
+		newFieldValue <- getModifiedValue currentFieldType currentFieldValue structKey (actualType, value, state1)
 
-			let newStructValue = overrideArrayValue currentFieldID newFieldValue currentFields
-			return (UserValue newStructValue)
+		let newStructValue = overrideArrayValue currentFieldID newFieldValue currentFields
+		return (UserValue newStructValue)
 
 isAssignVar :: AssignKey -> Bool
 isAssignVar (AssignVar a) = True

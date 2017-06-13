@@ -1,7 +1,7 @@
 
 struct fracao1 {
 	c : int = 1;
-	b : nat = 1;
+	b : nat;
 }
 
 struct fracao2 {
@@ -10,7 +10,7 @@ struct fracao2 {
 
 struct fracao {
 	#a : fracao1;
-	c : nat = 1;
+	c : nat;
 	z : fracao2;
 }
 

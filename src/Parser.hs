@@ -46,6 +46,14 @@ parseVarDec = do
 	semi
 	return $ Var name t v
 
+parseFieldDec :: OWLParser Declaration
+parseFieldDec = do
+	name <- identifier
+	colon
+	t <- parseVarType
+	semi
+	return $ Var name t Nothing
+
 parseFuncDec :: OWLParser Declaration
 parseFuncDec = do
 	funcToken
@@ -89,7 +97,7 @@ parseUserType :: OWLParser UserType
 parseUserType = do
 	structToken
 	name <- identifier
-	fields <- braces (many parseVarDec)
+	fields <- braces (many parseFieldDec)
 	return (name, fields)
 
 ---------------------------------------------------------------------------------------------------
