@@ -1,67 +1,159 @@
+struct rational_t {
+    numerador : real;
+    denominador : real;
+}
+
+func construtor(numerador : real, denominador : real) : rational_t {   
+    novo : rational_t;
+    novo.numerador = numerador;
+    novo.denominador = denominador;
+    return novo;
+}
+
+func compara(fracao_1 : rational_t, fracao_2 : rational_t) : bool {   
+    if(fracao_1.numerador == fracao_2.numerador && fracao_1.denominador == fracao_2.denominador){
+        return true;
+    }
+    return false;
+}
+
+func soma(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    return fracao_1;
+}
+
+func subtracao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    return fracao_1;
+}
+
+func multiplicacao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    aux : rational_t;
+    aux.numerador = fracao_1.numerador * fracao_2.numerador;
+    aux.denominador = fracao_1.denominador * fracao_2.denominador;
+    return aux;
+}
+
+func divisao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    aux : rational_t;
+    aux.numerador = fracao_1.numerador * fracao_2.denominador;
+    aux.denominador = fracao_1.denominador * fracao_2.numerador;
+    return aux;
+}
+
+func mdc(a : real, b : real) : real{
+        
+    if(b == 0){
+    	return a;
+    }
+    
+    return mdc(b,a%b);
+}
+
+func mmc(a : real, b : real) : real{
+    div : real;
+    if(b == 0){
+    	return a;
+    }
+    else{
+    	div = (a*b)/(mdc(a,b));
+    }
+    return div;
+}
+
+func negacao(fracao_1 : rational_t) : rational_t {   
+    fracao_1.numerador = -fracao_1.numerador;
+    return fracao_1;
+}
+
+func inverso(fracao_1 : rational_t) : rational_t {   
+    aux : int;
+    aux = fracao_1.numerador;
+    fracao_1.numerador = fracao_1.denominador;
+    fracao_1.denominador = aux;
+    return fracao_1;
+}
 
 main() {
-	a : real;
-	b : real;
-	
-	write ("Digite um número racional: \n");
-	a = readReal();
+    numerador : real;
+    denominador : real;
 
-	write ("Digite outro número racional: \n");
-	b = readReal();
+    fracao_1 : rational_t;
+    fracao_2 : rational_t;
+   
+    write("Preencha informações so bre o primeiro número racional:\n");
+    write ("Digite o numerador: \n");
+    numerador = readReal();
 
-	if (a == b) {
-		write("Os racionais são iguais\n");
-	}else {
-		write ("Os numeros racionais sao diferentes!\n");
-	}
-	
-	write ("Soma a + b: ");
-	write (a + b);
-	write("\n");
+    write ("Digite o denominador: \n");
+    denominador = readReal();
 
-	write ("Soma b + a: ");
-	write (b + a);
-	write("\n");
+    write(mmc(numerador,denominador));
 
-	write ("Negação de a: ");
-	write (-a);
-	write("\n");
+    #fracao_1 = construtor(numerador, denominador);
 
-	write ("Negação de b: ");
-	write (-b);
-	write("\n");
+    #write("Preencha informações sobre o segundo número racional:\n");
+    #write ("Digite o numerador: \n");
+    #numerador = readInt();
 
-	write ("Subtração a - b: ");
-	write(a - b);
-	write("\n");
+    #write ("Digite o denominador: \n");
+    #denominador = readInt();
 
-	write ("Subtração b - a: ");
-	write(b - a);
-	write("\n");
+    #fracao_2 = construtor(numerador, denominador);
 
-	write ("Produto a*b: ");
-	write(a * b);
-	write("\n");
+    #if(compara(fracao_1,fracao_2)){
+     #   write("Os racionais são iguais\n");
+    #}else {
+     #   write ("Os numeros racionais sao diferentes!\n");
+    #}
 
-	write ("Produto b*a: ");
-	write(b * a);
-	write("\n");
 
-	write ("Inverso de a: ");
-	write(1/a);
-	write("\n");
+   
+    #write ("Soma a + b: ");
+    #write (rational_t.numerador + rational_t.denominador);
+    #write("\n");
 
-	write ("Inverso de b: ");
-	write(1/b);
-	write("\n");
+    #write ("Soma b + a: ");
+    #write (b + a);
+    #write("\n");
 
-	write ("Divisao a/b:");
-	write(a/b);
-	write("\n");
+    #write ("Negação de a: ");
+    #write (-a);
+    #write("\n");
 
-	write ("Divisao b/a:");
-	write(b/a);
+    #write ("Negação de b: ");
+    #write (-b);
+    #write("\n");
 
-	write("\n");
-	return 0;
+    #write ("Subtração a - b: ");
+    #write(a - b);
+    #write("\n");
+
+    #write ("Subtração b - a: ");
+    #write(b - a);
+    #write("\n");
+
+    #write ("Produto a*b: ");
+    #write(a * b);
+    #write("\n");
+
+    #write ("Produto b*a: ");
+    #write(b * a);
+    #write("\n");
+
+    #write ("Inverso de a: ");
+    #write(1/a);
+    #write("\n");
+
+    #write ("Inverso de b: ");
+    #write(1/b);
+    #write("\n");
+
+    #write ("Divisao a/b:");
+    #write(a/b);
+    #write("\n");
+
+    #write ("Divisao b/a:");
+    #write(b/a);
+
+    write("\n");
+    return 0;
 }
