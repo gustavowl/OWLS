@@ -221,15 +221,15 @@ verifyDecType dec (d:decs) = do
 verifyTypeDecs :: UserType -> IO Bool
 verifyTypeDecs (_,[]) = do return True
 verifyTypeDecs (name, (d:decs)) = do 
-	v <- verifyDecType d decs 
-	if v then verifyTypeDecs (name, decs) else do return False
+	verifyDecType d decs 
+	verifyTypeDecs (name, decs)
 
 verifyTypes :: [UserType] -> IO Bool 
 verifyTypes [] = do return True
 verifyTypes (u:userTypes) = do
-	v <- verifyType u userTypes
+	verifyType u userTypes
 	verifyTypeDecs u  
-	if v then verifyTypes userTypes else do return False
+	verifyTypes userTypes
 
 getListUserTypes :: OWLState -> [UserType]
 getListUserTypes (_, _, _, userTypes) = userTypes
