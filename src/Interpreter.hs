@@ -240,6 +240,7 @@ runStatement (Assignment assignkey expr) state1 = do
 	(expectedType, currentValue) <- getVar key state2
 	-- Modificar o valor da variável.
 	value <- getModifiedValue expectedType currentValue assignkey (actualType, value, state2)
+	
 	let state3 = updateVar value key state2
 	return (state3, Continue)
 
@@ -311,41 +312,8 @@ evalNumExpr expr state1 = do
 numToExpr :: String -> Double -> OWLState -> (VarType, VarValue, OWLState)
 numToExpr typ val state = (AtomicType typ, NumberValue val, state)
 
-getFieldValue :: String -> [Declaration] -> [VarValue] -> IO (VarType, VarValue)
-getFieldValue _ [] [] = do return (nullVarType, nullVarValue)
-getFieldValue name1 (d:decs) (v:varValues) = do 
-	let name2 = getDecName d
-	let t = getDecType d
-	if name1 == name2 then do
-		return (t, v)
-	else do
-		getFieldValue name1 decs varValues
-
 stringToDouble :: String -> Double
 stringToDouble x = read x :: Double
-
-searchFieldValue :: VarType -> [VarValue] -> String -> OWLState -> IO (VarType, VarValue)
-searchFieldValue (AtomicType t) v n (_, _, _, userTypes) =
-	let (_,decs) = getUserType t userTypes in
-	getFieldValue n decs v
-searchFieldValue t v n (_, _, _, userTypes) = do return (nullVarType, nullVarValue) -- TODO 
-
-findFieldValue :: Expr -> String -> OWLState -> IO (VarType, VarValue)
-findFieldValue (ID root) name state1 = do 
-	(t, v, _) <- evalExpr (ID root) state1
-	return (t, v)
-findFieldValue (Field expr name1) name2 state1 = do
-	(t, v) <- findFieldValue expr name1 state1
-	if isUserType v then do
-		searchFieldValue t (getVarValueList v) name1 state1
-	else if name1 /= name2 then
-		return (t, v)
-	else 
-		fail "Not found."
-	
-isUserType :: VarValue -> Bool
-isUserType (UserValue v) = True
-isUserType _ = False
 
 getVarValueList :: VarValue -> [VarValue]
 getVarValueList (UserValue v) = v 
@@ -452,9 +420,11 @@ evalExpr (Content expr) state1 = do
 	return (t, v, state2)
 
 -- Struct field.
-evalExpr (Field expr name) state = do 
-	(t, v) <- findFieldValue (Field expr name) name state
-	return (t, v, state)
+evalExpr (Field expr name) state1 = do 
+	((AtomicType t), v, state2) <- evalExpr expr state1
+	(_, decs) <- getUserType t (getListUserTypes state2) -- tipo do usuário (name, [Declaration])	
+	(fieldType, fieldValue) <- getFieldValue name decs (getVarValueList v)
+	return (fieldType, fieldValue, state2)
 
 -- Array elements.
 evalExpr (ArrayEl aexpr iexpr) state1 = do 
@@ -725,13 +695,66 @@ getModifiedValue exptectedType currentValue (AssignEl arrayKey indexExpr) (actua
 		let newArrayValue = overrideArrayValue i newElValue currentArrayValue 
 		return (ArrayValue size newArrayValue)
 
-assignToKey (AssignField structKey field) (actualType, value, state1) = do 
-	-- scopeID <- getScopeID struct state1
+-- tipo da variável chave, valor da variável chave, assign, (tipo do valor novo, valor, state)
+getModifiedValue exptectedType currentValue (AssignField structKey fieldName) (actualType, value, state1) = do 
+	
+	currentFields <- getFieldValues currentValue -- [VarValues]
+ 	userTypeName <- getUserTypeName exptectedType
+	let fields = getUserTypeDecs userTypeName (getListUserTypes state1)
+
+	let currentFieldID = getFieldID fieldName fields -- nome do campo e lista com as declarações dos campos
+	if currentFieldID < 0 then
+		fail $ "There is no field name " ++ fieldName
+	else do
+		currentFieldValue <- getField currentFieldID currentFields -- pega o campo na posição i na variável atual
+		currentFieldType <-  getFieldType currentFieldID fields
+
+		if isAssignVar structKey then do
+			convertType currentFieldType actualType
+			let newStructValue = overrideArrayValue currentFieldID value currentFields
+			return (UserValue newStructValue)
+		else do
+			newFieldValue <- getModifiedValue currentFieldType currentFieldValue structKey (actualType, value, state1)
+
+			let newStructValue = overrideArrayValue currentFieldID newFieldValue currentFields
+			return (UserValue newStructValue)
+
+getModifiedValue exptectedType currentValue (AssignContent ptr) (actualType, value, state1) = do 
 	return value -- TODO
 
-assignToKey (AssignContent ptr) (actualType, value, state1) = do 
-	return value -- TODO
+isAssignVar :: AssignKey -> Bool
+isAssignVar (AssignVar a) = True
+isAssignVar _ = False
+
+getFieldID :: String -> [Declaration] -> Integer
+getFieldID name [] = -1
+getFieldID name (d:decs) = do
+	let current = getDecName d
+	if current == name then
+		0
+	else
+		((getFieldID name decs) + 1)
+
+getFieldType :: Integer -> [Declaration] -> IO VarType
+getFieldType pos [] = fail $ "There is no field in current pos."
+getFieldType 0 (d:decs) = do return (getDecType d)
+getFieldType pos (d:decs) = getFieldType (pos - 1) decs
+
+getField :: Integer -> [VarValue] -> IO VarValue
+getField i [] = fail "WTF"
+getField 0 (v:vars) = do return v
+getField i (v:vars) = getField (i-1) vars
 
 overrideArrayValue :: Integer -> VarValue -> [VarValue] -> [VarValue]
 overrideArrayValue i v [] = []
 overrideArrayValue i v (h:t) = if i == 0 then (v:t) else h:(overrideArrayValue (i - 1) v t)
+
+getFieldValue :: String -> [Declaration] -> [VarValue] -> IO (VarType, VarValue)
+getFieldValue name [] [] = do fail $ "There is no name field " ++ name
+getFieldValue name1 (d:decs) (v:varValues) = do 
+	let name2 = getDecName d
+	let t = getDecType d
+	if name1 == name2 then do
+		return (t, v)
+	else do
+		getFieldValue name1 decs varValues

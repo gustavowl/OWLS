@@ -50,6 +50,17 @@ getArrayValue :: VarValue -> IO (Integer, [VarValue])
 getArrayValue (ArrayValue l v) = do return (l, v)
 getArrayValue a = do fail $ show a ++ " is not an array."
 
+getUserTypeName :: VarType -> IO String
+getUserTypeName (AtomicType "nat") = do fail "not a user type"
+getUserTypeName (AtomicType "int") = do fail "not a user type"
+getUserTypeName (AtomicType "real") = do fail "not a user type"
+getUserTypeName (AtomicType a) = do return a
+getUserTypeName _ = do fail "not a user type"
+
+getFieldValues :: VarValue -> IO [VarValue]
+getFieldValues (UserValue v) = do return v
+getFieldValues _ = fail "WTF"
+
 -- ExpectedType, ActualType, Final Type
 convertType :: VarType -> VarType -> IO VarType
 convertType (AtomicType "int") (AtomicType "nat") = do return $ AtomicType "int"
