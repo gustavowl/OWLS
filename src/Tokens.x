@@ -91,6 +91,8 @@ tokens :-
   readReal                             { \p s -> newToken p ReadReal}
   write                                { \p s -> newToken p Write}
   array                                { \p s -> newToken p Array}
+  floor                                { \p s -> newToken p Floor}
+  ceil                                 { \p s -> newToken p Ceil}
   sizeof                               { \p s -> newToken p Sizeof}
   const                                { \p s -> newToken p Const}
   new                                  { \p s -> newToken p New}
@@ -120,6 +122,8 @@ data TokenSymbol =
   ReadReal |
   Write |
   Array |
+  Floor |
+  Ceil |
   Sizeof |
   Colon   |
   SemiColon |

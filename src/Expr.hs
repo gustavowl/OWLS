@@ -44,27 +44,6 @@ parseFuncCall = do
 	args <- parens $ sepBy parseExpr comma
 	return $ FuncCall func args
 
-parseReadNatCall :: OWLParser Expr
-parseReadNatCall = do
-	readNatToken
-	lparen
-	rparen
-	return $ ReadNatCall
-
-parseReadIntCall :: OWLParser Expr
-parseReadIntCall = do
-	readIntToken
-	lparen
-	rparen
-	return $ ReadIntCall
-
-parseReadRealCall :: OWLParser Expr
-parseReadRealCall = do
-	readRealToken
-	lparen
-	rparen
-	return $ ReadRealCall
-
 parseReadCall :: OWLParser Expr
 parseReadCall = do
 	readToken
@@ -246,6 +225,8 @@ parseNumExpr = parseAddChain
 parseNumLeaf :: OWLParser Expr
 parseNumLeaf = (try parseNumUnary)
 	<|> (try parseNumber)
+	<|> (try parseFloorCall)
+	<|> (try parseCeilCall)
 	<|> (try parseReadNatCall)
 	<|> (try parseReadIntCall)
 	<|> (try parseReadRealCall)
@@ -272,6 +253,44 @@ parseReal :: OWLParser Expr
 parseReal = do
 	n <- real
 	return $ RealLit n
+
+---------------------------------------------------------------------------------------------------
+-- Numeric Functions
+---------------------------------------------------------------------------------------------------
+
+parseFloorCall :: OWLParser Expr
+parseFloorCall = do
+	floorToken
+	expr <- parens parseExpr
+	return $ FloorCall expr
+
+parseCeilCall :: OWLParser Expr
+parseCeilCall = do
+	ceilToken
+	expr <- parens parseExpr
+	return $ CeilCall expr
+
+parseReadNatCall :: OWLParser Expr
+parseReadNatCall = do
+	readNatToken
+	lparen
+	rparen
+	return $ ReadNatCall
+
+parseReadIntCall :: OWLParser Expr
+parseReadIntCall = do
+	readIntToken
+	lparen
+	rparen
+	return $ ReadIntCall
+
+parseReadRealCall :: OWLParser Expr
+parseReadRealCall = do
+	readRealToken
+	lparen
+	rparen
+	return $ ReadRealCall
+
 
 ---------------------------------------------------------------------------------------------------
 -- Numeric Unary Operators

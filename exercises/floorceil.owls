@@ -1,0 +1,9 @@
+main() {
+	x : int = floor (9 / 2);
+	write(x);
+	write('\n');
+	x = ceil (9 / 2);
+	write(x);
+	write('\n');
+	return 0;
+}

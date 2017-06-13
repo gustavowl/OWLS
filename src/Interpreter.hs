@@ -217,7 +217,6 @@ runStatement (For (Procedure name params body1) expr incr body2) state1 = do
 	(state2, _) <- runStatement (ProcDec (Procedure name params body1)) state1
 	return (state2, Continue)
 
-
 runStatement Break state = do
 	return (state, BreakCall)
 
@@ -244,52 +243,6 @@ runStatement (Assignment assignkey expr) state1 = do
 	let state3 = updateVar value key state2
 	return (state3, Continue)
 
-{-
-runStatement (Assignment (AssignEl array index) assign) state1 = do 
-	return (state1, Continue) -- TODO
-
-runStatement (Assignment (AssignField struct field) assign) state1 = do
-	let structVarName = getStructName (AssignField struct field)
-	scopeID <- getScopeID structVarName state1
-	(t1, v1, state2) <- evalExpr assign state1
-	(t2, v2) <- getVar (structVarName, scopeID) state2
-	if isUserType v2 then do
-		(t3, v3) <- searchFieldValue t2 (getVarValueList v2) field state2
-		convertType t3 t1 
-		(AtomicType typename, _) <- getVar (structVarName, scopeID) state2
-		let types = getListUserTypes state2
-		let (_, decs) = getUserType typename types
-		let newStruct = updateStruct v1 v2 (AssignVar field) decs
-		return ((updateVar (UserValue newStruct) (structVarName, scopeID) state2), Continue)
-	else
-		fail "Struct field not found."
-
-runStatement (Assignment (AssignContent ptr) assign) state1 = do 
-	return (state1, Continue) -- TODO
-
-updateField :: VarValue -> VarValue -> AssignKey -> Declaration -> VarValue
-updateField fieldValue currentFieldValue (AssignVar field) dec = do
-	let name = getDecName dec --supposes type was previously verified 
-	if field == name then --changes value
-		fieldValue
-	else --keeps the same
-		currentFieldValue
---updateField fieldValue currentFieldValue (AssignField struct field) dec = nullVarValue
-updateField fieldValue currentFieldValue _ dec = nullVarValue
-
--- new field value, structVar, assign, decs 
-updateStruct :: VarValue -> VarValue -> AssignKey -> [Declaration] -> [VarValue]
-updateStruct fieldValue structVar assign [] = [] -- INCOMPLETO AQUI!!!
-updateStruct fieldValue (UserValue (s:structVar)) assign (d:decs) = do
-	updateField fieldValue s assign d : updateStruct fieldValue (UserValue (structVar)) assign (decs)
-
-getStructName :: AssignKey -> String
-getStructName (AssignVar name) = name
-getStructName (AssignEl assignKey expr) = getStructName assignKey
-getStructName (AssignField assignKey name) = getStructName assignKey
-getStructName (AssignContent assignKey) = getStructName assignKey
-
--}
 printValue :: VarType -> VarValue -> IO()
 printValue _ (BoolValue b) = do
 	putStr (show b)
@@ -439,6 +392,26 @@ evalExpr (ReadRealCall) state = do
 	line <- getLine 
 	let expr = NumberValue $ stringToDouble line 
 	return (AtomicType "real", expr, state) -- ADD ArrayValue
+
+-- Floor call.
+evalExpr (FloorCall expr) state1 = do
+	(typ, val, state2) <- evalExpr expr state1
+	if canConvertType (AtomicType "int") typ then
+		return (typ, val, state2)
+	else do
+		v <- getNumberValue val
+		let newv = fromIntegral (floor v)
+		return (AtomicType "int", NumberValue newv, state2)
+
+-- Ceil call.
+evalExpr (CeilCall expr) state1 = do
+	(typ, val, state2) <- evalExpr expr state1
+	if canConvertType (AtomicType "int") typ then
+		return (typ, val, state2)
+	else do
+		v <- getNumberValue val
+		let newv = fromIntegral (ceiling v)
+		return (AtomicType "int", NumberValue newv, state2)
 
 -- Array call.
 evalExpr (ArrayCall exprs) state1 = do

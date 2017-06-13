@@ -49,6 +49,8 @@ data Expr = BoolLit Bool
 	| ReadNatCall
 	| ReadIntCall
 	| ReadRealCall
+	| FloorCall Expr
+	| CeilCall Expr
 	| ArrayCall [Expr]
 	| SizeofCall Expr
 	| NewCall VarType

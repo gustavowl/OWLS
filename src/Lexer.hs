@@ -81,6 +81,12 @@ readIntToken = tokenPrim show updatePos (simpleGetToken ReadInt)
 readRealToken :: TokenParser
 readRealToken = tokenPrim show updatePos (simpleGetToken ReadReal)
 
+floorToken :: TokenParser
+floorToken = tokenPrim show updatePos (simpleGetToken Floor)
+
+ceilToken :: TokenParser
+ceilToken = tokenPrim show updatePos (simpleGetToken Ceil)
+
 writeToken :: TokenParser
 writeToken = tokenPrim show updatePos (simpleGetToken Write)
 
