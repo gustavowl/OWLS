@@ -19,7 +19,7 @@ main() {
 			c = c + 1;
 		}
 		if(76 <= x && x <= 100){
-			d = c + 1;
+			d = d + 1;
 		}
 		write ("Digite um número natural, ou um inteiro negativo caso deseje sair: \n");
 		x = readInt();
