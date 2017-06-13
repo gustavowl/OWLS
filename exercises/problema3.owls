@@ -30,6 +30,11 @@ main() {
 	write("Insira a quantidade de colunas da matriz B:\n");
 	colB : nat = readNat();
 
+	if (colA <= 0 || colB <= 0 || rowA <= 0 || rowB <= 0) {
+		write ("Não é possível fazer a multiplicação com valores inválidos.\n");
+		return 0;
+	}
+
 	if (colA != rowB) {
 		write ("Não é possível fazer a multiplicação.\n");
 		return 0;
