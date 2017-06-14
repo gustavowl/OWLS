@@ -48,7 +48,6 @@ func soma(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {
     resultado : rational_t;
     auxMmc : int = floor(mmc(fracao_1.denominador, fracao_2.denominador));
     aux : int;
-    write("DEBUG");
     aux  = floor(auxMmc/fracao_1.denominador);
     fracao_1.numerador = fracao_1.numerador * aux;
 
