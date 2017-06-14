@@ -121,9 +121,13 @@ runIfElseBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
 runIfElseBody [] state = do return (state, Continue)
 runIfElseBody (s:stmts) state = do 
 	runStatement s state >>= f where
-		f (state1, Return expr) = do return (state1, Return expr)
+		f (state1, Return expr) = do 
+			let state2 = popScope state1
+			return (state2, Return expr)
 		f (state1, Continue) = (runIfElseBody stmts state1)
-		f (state1, BreakCall) = do return (state1, BreakCall)
+		f (state1, BreakCall) = do 
+			let state2 = popScope state1
+			return (state2, BreakCall)
 		f _ = fail "Error in block (if else)."
 
 runLoopStmts :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
@@ -200,10 +204,11 @@ runStatement (FuncRet expr) state = do
 runStatement (If expr ifbody elsebody) state1 = do
 	(varType, varValue, state2) <- evalExpr expr state1
 	convertType (AtomicType "bool") varType
+	let state3 = newScope (getCurrentScopeID state1) state2
 	if varValue == BoolValue True then
-		runIfElseBody ifbody state2
+		runIfElseBody ifbody state3
 	else
-		runIfElseBody elsebody state2
+		runIfElseBody elsebody state3
 
 runStatement (While expr body) state1 = do
 	(varType, varValue, state2) <- evalExpr expr state1
