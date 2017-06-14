@@ -1,9 +1,9 @@
 struct rational_t {
-    numerador : real;
-    denominador : real;
+    numerador : int;
+    denominador : int;
 }
 
-func construtor(numerador : real, denominador : real) : rational_t {   
+func construtor(numerador : int, denominador : int) : rational_t {   
     novo : rational_t;
     novo.numerador = numerador;
     novo.denominador = denominador;
@@ -17,11 +17,16 @@ func compara(fracao_1 : rational_t, fracao_2 : rational_t) : bool {
     return false;
 }
 
-func soma(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+func negacao(fracao_1 : rational_t) : rational_t {   
+    fracao_1.numerador = -fracao_1.numerador;
     return fracao_1;
 }
 
-func subtracao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+func inverso(fracao_1 : rational_t) : rational_t {   
+    aux : int;
+    aux = fracao_1.numerador;
+    fracao_1.numerador = fracao_1.denominador;
+    fracao_1.denominador = aux;
     return fracao_1;
 }
 
@@ -38,6 +43,41 @@ func divisao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {
     aux.denominador = fracao_1.denominador * fracao_2.numerador;
     return aux;
 }
+
+func soma(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    resultado : rational_t;
+    auxMmc : int = floor(mmc(fracao_1.denominador, fracao_2.denominador));
+    aux : int;
+    write("DEBUG");
+    aux  = floor(auxMmc/fracao_1.denominador);
+    fracao_1.numerador = fracao_1.numerador * aux;
+
+    aux  = floor(auxMmc/fracao_2.denominador);
+    fracao_2.numerador = fracao_2.numerador * aux;
+
+    resultado.denominador = auxMmc;
+    resultado.numerador = fracao_1.numerador + fracao_2.numerador;
+    
+    return resultado;
+}
+
+func subtracao(fracao_1 : rational_t, fracao_2 : rational_t) : rational_t {   
+    resultado : rational_t;
+    auxMmc : int = floor(mmc(fracao_1.denominador, fracao_2.denominador));
+    aux : int;
+    write("DEBUG");
+    aux  = floor(auxMmc/fracao_1.denominador);
+    fracao_1.numerador = fracao_1.numerador * aux;
+
+    aux  = floor(auxMmc/fracao_2.denominador);
+    fracao_2.numerador = fracao_2.numerador * aux;
+
+    resultado.denominador = auxMmc;
+    resultado.numerador = fracao_1.numerador - fracao_2.numerador;
+    
+    return resultado;
+}
+
 
 func mdc(a : real, b : real) : real{
         
@@ -59,106 +99,145 @@ func mmc(a : real, b : real) : real{
     return div;
 }
 
-func negacao(fracao_1 : rational_t) : rational_t {   
-    fracao_1.numerador = -fracao_1.numerador;
-    return fracao_1;
-}
-
-func inverso(fracao_1 : rational_t) : rational_t {   
-    aux : int;
-    aux = fracao_1.numerador;
-    fracao_1.numerador = fracao_1.denominador;
-    fracao_1.denominador = aux;
-    return fracao_1;
-}
-
 main() {
-    numerador : real;
-    denominador : real;
+    numerador : int;
+    denominador : int;
 
     fracao_1 : rational_t;
     fracao_2 : rational_t;
    
-    write("Preencha informações so bre o primeiro número racional:\n");
+    write("Preencha informações so bre o primeiro número racional (racional A):\n");
     write ("Digite o numerador: \n");
-    numerador = readReal();
+    numerador = readInt();
 
     write ("Digite o denominador: \n");
-    denominador = readReal();
+    denominador = readInt();
 
     if(denominador == 0){
-    	write("Entrada inválida. ")
+    	write("Entrada inválida. ");
     	return 0;
     }
 
-    write(mmc(numerador,denominador));
+    fracao_1 = construtor(numerador, denominador);
 
-    #fracao_1 = construtor(numerador, denominador);
+    write("Preencha informações sobre o segundo número racional (racional B):\n");
+    write ("Digite o numerador: \n");
+    numerador = readInt();
 
-    #write("Preencha informações sobre o segundo número racional:\n");
-    #write ("Digite o numerador: \n");
-    #numerador = readInt();
+    write ("Digite o denominador: \n");
+    denominador = readInt();
 
-    #write ("Digite o denominador: \n");
-    #denominador = readInt();
+    if(denominador == 0){
+        write("Entrada inválida. ");
+        return 0;
+    }
 
-    #fracao_2 = construtor(numerador, denominador);
+    fracao_2 = construtor(numerador, denominador);
 
-    #if(compara(fracao_1,fracao_2)){
-     #   write("Os racionais são iguais\n");
-    #}else {
-     #   write ("Os numeros racionais sao diferentes!\n");
-    #}
+    if(compara(fracao_1,fracao_2)){
+        write("Os racionais são iguais\n");
+    }else {
+        write ("Os numeros racionais sao diferentes!\n");
+    }
+
+    aux : rational_t;
+
+    write ("-- Negação do racional A: --\n");
+    aux = negacao(fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
+
+    write ("-- Negação do racional B: --\n");
+    aux = negacao(fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n\n");
+
+    write ("-- Inverso do racional A: --\n");
+    aux = inverso(fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
+
+    write ("-- Inverso do racional B: --\n");
+    aux = inverso(fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n\n");
 
 
-   
-    #write ("Soma a + b: ");
-    #write (rational_t.numerador + rational_t.denominador);
-    #write("\n");
+    write ("-- Multiplicação dos racional A*B: --\n");
+    aux = multiplicacao(fracao_1, fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
 
-    #write ("Soma b + a: ");
-    #write (b + a);
-    #write("\n");
+    write ("-- Multiplicação dos racional B*A: --\n");
+    aux = multiplicacao(fracao_2, fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n\n");
 
-    #write ("Negação de a: ");
-    #write (-a);
-    #write("\n");
+    write ("-- Divisão dos racional A*B: --\n");
+    aux = divisao(fracao_1, fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
 
-    #write ("Negação de b: ");
-    #write (-b);
-    #write("\n");
+    write ("-- Divisão dos racional B*A: --\n");
+    aux = divisao(fracao_2, fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n\n");
 
-    #write ("Subtração a - b: ");
-    #write(a - b);
-    #write("\n");
+    write ("-- Soma dos racional A+B: --\n");
+    aux = soma(fracao_1, fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
 
-    #write ("Subtração b - a: ");
-    #write(b - a);
-    #write("\n");
+    write ("-- Soma dos racional B+A: --\n");
+    aux = soma(fracao_2, fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n\n");
 
-    #write ("Produto a*b: ");
-    #write(a * b);
-    #write("\n");
+    write ("-- Subtração dos racional A+B: --\n");
+    aux = subtracao(fracao_1, fracao_2);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    write("\n");
 
-    #write ("Produto b*a: ");
-    #write(b * a);
-    #write("\n");
-
-    #write ("Inverso de a: ");
-    #write(1/a);
-    #write("\n");
-
-    #write ("Inverso de b: ");
-    #write(1/b);
-    #write("\n");
-
-    #write ("Divisao a/b:");
-    #write(a/b);
-    #write("\n");
-
-    #write ("Divisao b/a:");
-    #write(b/a);
-
+    write ("-- Subtração dos racional B+A: --\n");
+    aux = subtracao(fracao_2, fracao_1);
+    write ("Numerador == ");
+    write (aux.numerador);
+    write ("\nDenominador == ");
+    write (aux.denominador);
+    
     write("\n");
     return 0;
 }
