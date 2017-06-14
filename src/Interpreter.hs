@@ -204,7 +204,7 @@ runStatement (FuncRet expr) state = do
 runStatement (If expr ifbody elsebody) state1 = do
 	(varType, varValue, state2) <- evalExpr expr state1
 	convertType (AtomicType "bool") varType
-	let state3 = newScope (getCurrentScopeID state1) state2
+	let state3 = newScope (getCurrentScopeID state2) state2
 	if varValue == BoolValue True then
 		runIfElseBody ifbody state3
 	else
