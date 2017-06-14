@@ -118,7 +118,9 @@ runProcBody name (s:stmts) state1 = do
 		f (state2, BreakCall) = fail "Break cannot breaking a procedure."
 
 runIfElseBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
-runIfElseBody [] state = do return (state, Continue)
+runIfElseBody [] state1 = do 
+	let state2 = popScope state1
+	return (state2, Continue)
 runIfElseBody (s:stmts) state = do 
 	runStatement s state >>= f where
 		f (state1, Return expr) = do 
