@@ -375,7 +375,7 @@ evalExpr (ReadCall) state = do
 -- Read call.
 evalExpr (ReadNatCall) state = do
 	line <- getLine 
-	let value = stringToDouble line 
+	let value = fromIntegral (floor $ stringToDouble line )
 	let expr = NumberValue value
 	if value < 0 then
 		fail  "Number not Natural"
@@ -385,7 +385,7 @@ evalExpr (ReadNatCall) state = do
 -- Read call.
 evalExpr (ReadIntCall) state = do
 	line <- getLine 
-	let expr = NumberValue $ stringToDouble line 
+	let expr = NumberValue $ fromIntegral (floor $ stringToDouble line )
 	return (AtomicType "int", expr, state) -- ADD ArrayValue
 
 -- Read call.
