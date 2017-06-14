@@ -21,7 +21,7 @@ main() {
 	m : int;
 	n : int;
 	r : int;
-	
+
 	write ("Digite dois numeros inteiros: \n");
 	m = readInt();
 	n = readInt();

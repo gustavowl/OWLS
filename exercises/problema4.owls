@@ -11,7 +11,7 @@ func construtor(numerador : int, denominador : int) : rational_t {
 }
 
 func compara(fracao_1 : rational_t, fracao_2 : rational_t) : bool {   
-    if(fracao_1.numerador == fracao_2.numerador && fracao_1.denominador == fracao_2.denominador){
+    if(fracao_1.numerador * fracao_2.denominador == fracao_1.denominador * fracao_2.numerador){
         return true;
     }
     return false;
@@ -105,7 +105,7 @@ main() {
     fracao_1 : rational_t;
     fracao_2 : rational_t;
    
-    write("Preencha informações so bre o primeiro número racional (racional A):\n");
+    write("Preencha informações sobre o primeiro número racional (racional A):\n");
     write ("Digite o numerador: \n");
     numerador = readInt();
 
@@ -190,7 +190,7 @@ main() {
     write (aux.denominador);
     write("\n\n");
 
-    write ("-- Divisão dos racional A*B: --\n");
+    write ("-- Divisão dos racional A/B: --\n");
     aux = divisao(fracao_1, fracao_2);
     write ("Numerador == ");
     write (aux.numerador);
@@ -198,7 +198,7 @@ main() {
     write (aux.denominador);
     write("\n");
 
-    write ("-- Divisão dos racional B*A: --\n");
+    write ("-- Divisão dos racional B/A: --\n");
     aux = divisao(fracao_2, fracao_1);
     write ("Numerador == ");
     write (aux.numerador);
@@ -222,7 +222,7 @@ main() {
     write (aux.denominador);
     write("\n\n");
 
-    write ("-- Subtração dos racional A+B: --\n");
+    write ("-- Subtração dos racional A-B: --\n");
     aux = subtracao(fracao_1, fracao_2);
     write ("Numerador == ");
     write (aux.numerador);
@@ -230,7 +230,7 @@ main() {
     write (aux.denominador);
     write("\n");
 
-    write ("-- Subtração dos racional B+A: --\n");
+    write ("-- Subtração dos racional B-A: --\n");
     aux = subtracao(fracao_2, fracao_1);
     write ("Numerador == ");
     write (aux.numerador);

@@ -3,7 +3,9 @@ x : int = 1;
 a : int = 5;
 
 func bla (a : int) : int {
+	write("aaa");
 	if (a == 10) {
+		write("aaaaa");
 		return a + 1;
 	} else {
 		return a + 2;

@@ -12,7 +12,8 @@ runProgram (types, decs, main) = do
 	initialState <- initState types
 	state <- addGlobalDecs decs initialState
 	i <- callMain getMainArgs main state
-	print i
+	return ()
+	--print ""
 
 addGlobalDecs :: [Declaration] -> OWLState -> IO OWLState
 addGlobalDecs [] state = do return state
