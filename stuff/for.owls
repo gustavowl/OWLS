@@ -1,10 +1,12 @@
 main() {
 	x : int = 12;
 	for (i : int = 0; i < 10; i = i + 1) {
+		write('\n');
 		for (j : int = 0; j < 2; j = j + 1) {
-			write('\n');
-			for (j : int = 0; j < 2; j = j + 1) {
+			write('\t');
+			for (j : int = 0; j < 10; j = j + 1) {
 				write(j);
+				write(' ');
 			}
 		}
 	}

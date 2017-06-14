@@ -1,0 +1,15 @@
+main() {
+	j : real = 2112;
+	i : int = 0;
+	while (i < 10) {
+		j : int = 0;
+		while (j < 10) {
+			write(' ');
+			write(j);
+			j = j + 1;
+		}
+		write(j);
+		i = i + 1;
+	}
+	return 93;
+}

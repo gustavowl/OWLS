@@ -126,15 +126,23 @@ runIfElseBody (s:stmts) state = do
 		f (state1, BreakCall) = do return (state1, BreakCall)
 		f _ = fail "Error in block (if else)."
 
-runLoopBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+runLoopStmts :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
 --when finishes running while loop; try running it again
-runLoopBody [] state = do return (state, Continue) 
-runLoopBody (s:stmts) state = do --executes next statement
+runLoopStmts [] state = do return (state, Continue) 
+runLoopStmts (s:stmts) state = do --executes next statement
 	runStatement s state >>= f where
 		f (state1, Return expr) = do return (state1, Return expr)
 		f (state1, Continue) = (runLoopBody stmts state1)
 		f (state1, BreakCall) = do return (state1, BreakCall)
-	--TODO stop when break
+
+runLoopBody :: [Statement] -> OWLState -> IO (OWLState, StatementResult)
+runLoopBody stmts state1 = do
+	--creates new scope for new iteration
+	let state2 = newScope (getCurrentScopeID state1) state1
+	(state3, result) <- runLoopStmts stmts state2
+	--deletes scope created for iteration
+	let state4 = popScope state3
+	return (state4, result)
 
 runWhileEvalResult :: Expr -> [Statement] -> OWLState -> StatementResult -> IO (OWLState, StatementResult)
 runWhileEvalResult expr body state Continue = (runStatement (While expr body) state) --iterate once
@@ -214,13 +222,13 @@ runStatement (For (Var id varType initVal) expr incr body) state1 = do
 	(state3, _) <- runStatement (VarDec (Var id varType initVal)) state2
 	runForIteration expr incr body state3
 runStatement (For (Function name params ret body1) expr incr body2) state1 = do
-	--let state2 = newScope parentID state1
-	(state2, _) <- runStatement (FuncDec (Function name params ret body1)) state1
-	return (state2, Continue)
+	let state2 = newScope (getCurrentScopeID state1) state1
+	(state3, _) <- runStatement (FuncDec (Function name params ret body1)) state1
+	runForIteration expr incr body2 state3
 runStatement (For (Procedure name params body1) expr incr body2) state1 = do
-	--let state2 = newScope parentID state1
-	(state2, _) <- runStatement (ProcDec (Procedure name params body1)) state1
-	return (state2, Continue)
+	let state2 = newScope (getCurrentScopeID state1) state1
+	(state3, _) <- runStatement (ProcDec (Procedure name params body1)) state1
+	runForIteration expr incr body2 state3
 
 runStatement Break state = do
 	return (state, BreakCall)
